@@ -1,0 +1,5 @@
+<?xml version="1.0"?>
+<ruleset name="Onramp Lab Laravel Standards">
+    <description>The Laravel Coding Standards</description>
+    <rule ref="onr-phpcs-laravel"/>
+</ruleset>
