@@ -1,17 +1,14 @@
 {
-    "name": "onramplab/laravel-package-template",
-    "description": "An laravel template",
+    "name": "onramplab/laravel-transcription",
+    "description": "A Laravel package providing transcription feature for audio file",
     "type": "library",
     "license": "MIT",
     "keywords": [
-        "template",
         "laravel",
-        "package",
-        "skeleton",
-        "boilerplate",
-        "laravel template",
-        "package template",
-        "laravel package template"
+        "transcript",
+        "transcription",
+        "speech to text",
+        "audio processing"
     ],
     "authors": [
         {
