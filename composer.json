@@ -38,7 +38,8 @@
     },
     "autoload": {
         "psr-4": {
-            "OnrampLab\\Transcription\\": "src/"
+            "OnrampLab\\Transcription\\": "src/",
+            "OnrampLab\\Transcription\\Database\\Factories\\": "database/factories"
         }
     },
     "autoload-dev": {
