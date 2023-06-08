@@ -1,9 +1,9 @@
 <?php
 
-namespace OnrampLab\LaravelPackageTemplate\Tests;
+namespace OnrampLab\Transcription\Tests;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use OnrampLab\LaravelPackageTemplate\LaravelPackageTemplateServiceProvider;
+use OnrampLab\Transcription\TranscriptionServiceProvider;
 use Orchestra\Testbench\TestCase as OrchestraTestCase;
 
 class TestCase extends OrchestraTestCase
@@ -31,7 +31,7 @@ class TestCase extends OrchestraTestCase
     protected function getPackageProviders($app)
     {
         return [
-            LaravelPackageTemplateServiceProvider::class,
+            TranscriptionServiceProvider::class,
         ];
     }
 }

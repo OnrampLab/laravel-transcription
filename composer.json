@@ -38,12 +38,12 @@
     },
     "autoload": {
         "psr-4": {
-            "OnrampLab\\LaravelPackageTemplate\\": "src/"
+            "OnrampLab\\Transcription\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "OnrampLab\\LaravelPackageTemplate\\Tests\\": "tests"
+            "OnrampLab\\Transcription\\Tests\\": "tests"
         }
     },
     "extra": {
@@ -52,7 +52,7 @@
         },
         "laravel": {
             "providers": [
-                "OnrampLab\\LaravelPackageTemplate\\LaravelPackageTemplateServiceProvider"
+                "OnrampLab\\Transcription\\TranscriptionServiceProvider"
             ]
         }
     },
