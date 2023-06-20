@@ -6,8 +6,11 @@
     </include>
   </coverage>
   <testsuites>
-    <testsuite name=":service_name Test Suite">
-      <directory suffix=".php">tests</directory>
+    <testsuite name=":service_name Unit Test">
+      <directory suffix="Test.php">tests/Unit</directory>
+    </testsuite>
+    <testsuite name=":service_name Feature Test">
+      <directory suffix="Test.php">tests/Feature</directory>
     </testsuite>
   </testsuites>
   <php>
