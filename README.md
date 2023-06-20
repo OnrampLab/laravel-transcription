@@ -8,7 +8,7 @@ A Laravel package providing transcription feature for audio file
 
 ## Requirements
 
-- PHP >= 8.0;
+- PHP >= 8.1;
 - composer.
 
 ## Features
