@@ -11,7 +11,7 @@ class TranscriptionServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        // $this->mergeConfigFrom(__DIR__ . '/../config/transcription.php', 'transcription');
+        $this->mergeConfigFrom(__DIR__ . '/../config/transcription.php', 'transcription');
     }
 
     /**
