@@ -1,0 +1,123 @@
+<?php
+
+namespace OnrampLab\Transcription\TranscriptionProviders;
+
+use Aws\Credentials\Credentials;
+use Aws\TranscribeService\TranscribeServiceClient;
+use Exception;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\TranscriptionProvider;
+use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
+use OnrampLab\Transcription\ValueObjects\Transcription;
+
+class AwsTranscribeTranscriptionProvider implements TranscriptionProvider
+{
+    protected TranscribeServiceClient $client;
+
+    protected array $tags;
+
+    private const JOB_STATUS_MAPPING = [
+        'QUEUED' => TranscriptionStatusEnum::PROCESSING,
+        'IN_PROGRESS' => TranscriptionStatusEnum::PROCESSING,
+        'FAILED' => TranscriptionStatusEnum::FAILED,
+        'COMPLETED' => TranscriptionStatusEnum::COMPLETED,
+    ];
+
+    public function __construct(array $config)
+    {
+        $this->client = new TranscribeServiceClient([
+            'version' => '2017-10-26',
+            'region' => $config['region'],
+            'credentials' => new Credentials($config['access_key'], $config['access_secret']),
+        ]);
+        $this->tags = $config['tags'];
+    }
+
+    /**
+     * Transcribe audio file into text records in specific language.
+     */
+    public function transcribe(string $audioUrl, string $languageCode): Transcription
+    {
+        $this->validateUrl($audioUrl);
+
+        if (Str::startsWith($audioUrl, 'https://')) {
+            $audioUrl = $this->convertUrl($audioUrl, 'https', 's3');
+        }
+
+        $id = Str::uuid()->toString();
+        $job = $this->client->startTranscriptionJob([
+            'TranscriptionJobName' => $id,
+            'Media' => [
+                'MediaFileUri' => $audioUrl,
+            ],
+            'Tags' => $this->convertTags($this->tags),
+        ]);
+        $job = $job['TranscriptionJob'];
+
+        return new Transcription([
+            'id' => $id,
+            'status' => self::JOB_STATUS_MAPPING[$job['TranscriptionJobStatus']],
+        ]);
+    }
+
+    private function validateUrl(string $url): void
+    {
+        if (Str::startsWith($url, 's3://')) {
+            return;
+        }
+
+        if (Str::startsWith($url, 'https://') && Str::contains($url, 's3.amazonaws.com')) {
+            return;
+        }
+
+        throw new InvalidArgumentException('Provided URL is not a valid Amazon S3 bucket URL');
+    }
+
+    private function convertUrl(string $url, string $sourceSchema, $targetSchema): string
+    {
+        $pattern = $this->getUrlPattern($sourceSchema);
+        $isMatched = preg_match($pattern, $url, $matches);
+
+        if (!$isMatched) {
+            throw new InvalidArgumentException('Provided URL is not a valid Amazon S3 bucket URL');
+        }
+
+        $bucketName = $matches[1];
+        $result = Str::replace($this->getUrlBaseName($sourceSchema, $bucketName), $this->getUrlBaseName($targetSchema, $bucketName), $url);
+
+        return $result;
+    }
+
+    private function getUrlPattern(string $schema): string
+    {
+        return match ($schema) {
+            'https' => '/^https:\/\/(.+?).s3.amazonaws.com\//',
+            's3' => '/^s3:\/\/(.+?)\//',
+            default => throw new Exception("Unsupported URL schema: {$schema}"),
+        };
+    }
+
+    private function getUrlBaseName(string $schema, string $bucketName): string
+    {
+        $hostName = match ($schema) {
+            'https' => $bucketName . '.s3.amazonaws.com',
+            's3' => $bucketName,
+            default => throw new Exception("Unsupported URL schema: {$schema}"),
+        };
+
+        return "{$schema}://{$hostName}";
+    }
+
+    private function convertTags(array $tags): array
+    {
+        return Collection::make($tags)
+            ->map(fn (string $value, string $key) => [
+                'Key' => $key,
+                'Value' => $value,
+            ])
+            ->values()
+            ->toArray();
+    }
+}
