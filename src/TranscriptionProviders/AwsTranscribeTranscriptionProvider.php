@@ -5,11 +5,14 @@ namespace OnrampLab\Transcription\TranscriptionProviders;
 use Aws\Credentials\Credentials;
 use Aws\TranscribeService\TranscribeServiceClient;
 use Exception;
+use GuzzleHttp\Client as GuzzleClient;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
+use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class AwsTranscribeTranscriptionProvider implements TranscriptionProvider
@@ -59,6 +62,38 @@ class AwsTranscribeTranscriptionProvider implements TranscriptionProvider
         return new Transcription([
             'id' => $id,
             'status' => self::JOB_STATUS_MAPPING[$job['TranscriptionJobStatus']],
+        ]);
+    }
+
+    /**
+     * Fetch transcription data from third-party service.
+     */
+    public function fetch(string $id): Transcription
+    {
+        $job = $this->client->getTranscriptionJob([
+            'TranscriptionJobName' => $id,
+        ]);
+        $job = $job['TranscriptionJob'];
+        $status = self::JOB_STATUS_MAPPING[$job['TranscriptionJobStatus']];
+        $result = null;
+
+        if ($status === TranscriptionStatusEnum::COMPLETED) {
+            $transcriptUrl = $job['Transcript']['TranscriptFileUri'];
+
+            if (Str::startsWith($transcriptUrl, 's3://')) {
+                $transcriptUrl = $this->convertUrl($transcriptUrl, 's3', 'https');;
+            }
+
+            /** @var GuzzleClient $client */
+            $client = App::make(GuzzleClient::class);
+            $response = $client->request('GET', $transcriptUrl);
+            $result = json_decode($response->getBody()->getContents(), true);
+        }
+
+        return new Transcription([
+            'id' => $id,
+            'status' => $status,
+            'result' => $result,
         ]);
     }
 

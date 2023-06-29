@@ -4,6 +4,8 @@ namespace OnrampLab\Transcription\Tests\Unit\TranscriptionProviders;
 
 use Aws\Result;
 use Aws\TranscribeService\TranscribeServiceClient;
+use GuzzleHttp\Client as GuzzleClient;
+use GuzzleHttp\Psr7\Response as GuzzleResponse;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Mockery;
@@ -95,5 +97,44 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
         $audioUrl = 'https://www.example.com';
 
         $this->provider->transcribe($audioUrl, $this->languageCode);
+    }
+
+    /**
+     * @test
+     */
+    public function fetch_should_work(): void
+    {
+        $id = Str::uuid()->toString();
+        $transcriptUrl = 'https://s3.us-west-1.amazonaws.com/aws-transcribe-us-west-1-prod/111/222/333/asrOutput.json';
+        $result = new Result([
+            'TranscriptionJob' => [
+                'TranscriptionJobStatus' => 'COMPLETED',
+                'Transcript' => [
+                    'TranscriptFileUri' => $transcriptUrl,
+                ],
+            ],
+        ]);
+
+        $this->clientMock
+            ->shouldReceive('getTranscriptionJob')
+            ->once()
+            ->with(['TranscriptionJobName' => $id])
+            ->andReturn($result);
+
+        $this->mock(
+            GuzzleClient::class,
+            function ($mock) use ($transcriptUrl) {
+                $mock
+                    ->shouldReceive('request')
+                    ->once()
+                    ->with('GET', $transcriptUrl)
+                    ->andReturn(new GuzzleResponse(200, [], '{}'));
+            },
+        );
+
+        $transcription = $this->provider->fetch($id);
+
+        $this->assertEquals($transcription->id, $id);
+        $this->assertEquals($transcription->status, TranscriptionStatusEnum::COMPLETED);
     }
 }
