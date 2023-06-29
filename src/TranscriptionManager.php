@@ -4,9 +4,12 @@ namespace OnrampLab\Transcription;
 
 use Closure;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
+use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
+use OnrampLab\Transcription\Models\Transcript;
 
 class TranscriptionManager implements TranscriptionManagerContract
 {
@@ -31,6 +34,43 @@ class TranscriptionManager implements TranscriptionManagerContract
     public function addProvider(string $driverName, Closure $resolver): void
     {
         $this->providers[$driverName] = $resolver;
+    }
+
+    /**
+     * Make transcription for audio file in specific language
+     */
+    public function make(string $audioUrl, string $languageCode, ?string $providerName = null): void
+    {
+        $type = Str::kebab(Str::camel($providerName ?: $this->getDefaultProvider()));
+        $provider = $this->resolveProvider($providerName);
+        $transcription = $provider->transcribe($audioUrl, $languageCode);
+
+        Transcript::create([
+            'type' => $type,
+            'external_id' => $transcription->id,
+            'status' => $transcription->status->value,
+            'audio_file_url' => $audioUrl,
+            'language_code' => $languageCode,
+        ]);
+    }
+
+    /**
+     * Confirm asynchronous transcription process
+     */
+    public function confirm(Transcript $transcript): Transcript
+    {
+        $providerName = Str::snake(Str::camel($transcript->type));
+        $provider = $this->resolveProvider($providerName);
+        $transcription = $provider->fetch($transcript->external_id);
+
+        if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
+            $provider->parse($transcription, $transcript);
+        }
+
+        $transcript->status = $transcription->status->value;
+        $transcript->save();
+
+        return $transcript;
     }
 
     /**
