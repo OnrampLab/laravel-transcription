@@ -13,6 +13,7 @@ use InvalidArgumentException;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Models\Transcript;
+use OnrampLab\Transcription\Models\TranscriptSegment;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class AwsTranscribeTranscriptionProvider implements TranscriptionProvider
@@ -154,5 +155,53 @@ class AwsTranscribeTranscriptionProvider implements TranscriptionProvider
             ])
             ->values()
             ->toArray();
+    }
+
+
+    /**
+     * Parse transcripts result of transcription and persist them into database.
+     */
+    public function parse(Transcription $transcription, Transcript $transcript): void
+    {
+        $words = Collection::make([]);
+
+        Collection::make($transcription->result['results']['items'])
+            ->each(function (array $item) use (&$words, $transcript) {
+                $type = $item['type'];
+                $words = match ($item['type']) {
+                    'pronunciation' => $this->parsePronunciation($item, $words, $transcript),
+                    'punctuation' => $this->parsePunctuation($item, $words, $transcript),
+                    default => throw new Exception("Unknown item type: {$type}"),
+                };
+            });
+    }
+
+    private function parsePronunciation(array $item, Collection $words, Transcript $transcript): Collection
+    {
+        return $words->concat([
+            [
+                'start_time' => gmdate('H:i:s', (int) $item['start_time']),
+                'end_time' => gmdate('H:i:s', (int) $item['end_time']),
+                'content' => $item['alternatives'][0]['content'],
+            ],
+        ]);
+    }
+
+    private function parsePunctuation(array $item, Collection $words, Transcript $transcript): Collection
+    {
+        $first = $words->first();
+        $last = $words->last();
+        $last['content'] = $last['content'] . $item['alternatives'][0]['content'];
+        $words[$words->count() - 1] = $last;
+
+        TranscriptSegment::create([
+            'transcript_id' => $transcript->id,
+            'start_time' => $first['start_time'],
+            'end_time' => $last['end_time'],
+            'content' => $words->pluck('content')->join(' '),
+            'words' => $words->toArray(),
+        ]);
+
+        return Collection::make([]);
     }
 }

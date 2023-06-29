@@ -11,8 +11,10 @@ use InvalidArgumentException;
 use Mockery;
 use Mockery\MockInterface;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
+use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Tests\TestCase;
 use OnrampLab\Transcription\TranscriptionProviders\AwsTranscribeTranscriptionProvider as BaseTranscriptionProvider;
+use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class AwsTranscribeTranscriptionProvider extends BaseTranscriptionProvider
 {
@@ -136,5 +138,31 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
 
         $this->assertEquals($transcription->id, $id);
         $this->assertEquals($transcription->status, TranscriptionStatusEnum::COMPLETED);
+    }
+
+    /**
+     * @test
+     */
+    public function parse_should_work(): void
+    {
+        $transcript = Transcript::factory()->create();
+        $transcriptOutput = file_get_contents(__DIR__ . '/Data/aws_transcribe_transcript_output.json');
+        $transcription = new Transcription([
+            'id' => $transcript->external_id,
+            'status' => TranscriptionStatusEnum::COMPLETED,
+            'result' => json_decode($transcriptOutput, true),
+        ]);
+
+        $this->provider->parse($transcription, $transcript);
+
+        $transcript->refresh();
+
+        $this->assertEquals($transcript->segments->count(), 2);
+        $this->assertEquals($transcript->segments[0]->content, 'Welcome to Amazon transcribe.');
+        $this->assertEquals($transcript->segments[0]->start_time->toTimeString(), '00:00:00');
+        $this->assertEquals($transcript->segments[0]->end_time->toTimeString(), '00:00:01');
+        $this->assertEquals($transcript->segments[1]->content, 'You can use Amazon transcribe as a standalone transcription service or to add speech to text capabilities to any application.');
+        $this->assertEquals($transcript->segments[1]->start_time->toTimeString(), '00:00:02');
+        $this->assertEquals($transcript->segments[1]->end_time->toTimeString(), '00:00:09');
     }
 }
