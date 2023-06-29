@@ -34,4 +34,21 @@ return [
             'tags' => [],
         ],
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Confirmation Job
+    |--------------------------------------------------------------------------
+    |
+    | These options configure the behavior of confirmation job so you can
+    | control how many times the job should be attempted and how many seconds
+    | a next job should wait before retrying again. And also the queue that
+    | a job should be pushed onto.
+    |
+    */
+    'confirmation' => [
+        'tries' => 5,
+        'interval' => 600,
+        'queue' => 'default',
+    ],
 ];

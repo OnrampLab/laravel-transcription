@@ -9,6 +9,7 @@ use InvalidArgumentException;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
+use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
 
 class TranscriptionManager implements TranscriptionManagerContract
@@ -45,13 +46,16 @@ class TranscriptionManager implements TranscriptionManagerContract
         $provider = $this->resolveProvider($providerName);
         $transcription = $provider->transcribe($audioUrl, $languageCode);
 
-        Transcript::create([
+        $transcript = Transcript::create([
             'type' => $type,
             'external_id' => $transcription->id,
             'status' => $transcription->status->value,
             'audio_file_url' => $audioUrl,
             'language_code' => $languageCode,
         ]);
+
+        ConfirmTranscriptionJob::dispatch($transcript)
+            ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
     }
 
     /**
