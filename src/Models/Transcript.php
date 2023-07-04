@@ -31,12 +31,24 @@ class Transcript extends Model
         return $this->hasMany(TranscriptSegment::class);
     }
 
+    public function isProcessing(): bool
+    {
+        return $this->status === TranscriptionStatusEnum::PROCESSING->value;
+    }
+
+    public function isCompleted(): bool
+    {
+        return $this->status === TranscriptionStatusEnum::COMPLETED->value;
+    }
+
+    public function isFailed(): bool
+    {
+        return $this->status === TranscriptionStatusEnum::FAILED->value;
+    }
+
     public function isFinished(): bool
     {
-        return in_array($this->status, [
-            TranscriptionStatusEnum::FAILED->value,
-            TranscriptionStatusEnum::COMPLETED->value,
-        ]);
+        return $this->isCompleted() || $this->isFailed();
     }
 
     protected static function newFactory(): Factory
