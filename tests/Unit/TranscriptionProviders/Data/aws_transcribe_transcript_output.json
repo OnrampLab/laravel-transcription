@@ -1,0 +1,166 @@
+{
+  "jobName": "test-job",
+  "accountId": "111111111111",
+  "results": {
+    "transcripts": [
+      {
+        "transcript": "Welcome to Amazon transcribe. You can use Amazon transcribe as a standalone transcription service or to add speech to text capabilities to any application."
+      }
+    ],
+    "items": [
+      {
+        "start_time": "0.009",
+        "end_time": "0.439",
+        "alternatives": [{ "confidence": "0.999", "content": "Welcome" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "0.449",
+        "end_time": "0.62",
+        "alternatives": [{ "confidence": "0.999", "content": "to" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "0.629",
+        "end_time": "1.09",
+        "alternatives": [{ "confidence": "0.999", "content": "Amazon" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "1.1",
+        "end_time": "1.98",
+        "alternatives": [{ "confidence": "0.996", "content": "transcribe" }],
+        "type": "pronunciation"
+      },
+      {
+        "alternatives": [{ "confidence": "0.0", "content": "." }],
+        "type": "punctuation"
+      },
+      {
+        "start_time": "2.299",
+        "end_time": "2.5",
+        "alternatives": [{ "confidence": "0.999", "content": "You" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "2.509",
+        "end_time": "2.65",
+        "alternatives": [{ "confidence": "0.999", "content": "can" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "2.66",
+        "end_time": "2.88",
+        "alternatives": [{ "confidence": "0.999", "content": "use" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "2.89",
+        "end_time": "3.329",
+        "alternatives": [{ "confidence": "0.999", "content": "Amazon" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "3.339",
+        "end_time": "3.94",
+        "alternatives": [{ "confidence": "0.996", "content": "transcribe" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "3.95",
+        "end_time": "4.11",
+        "alternatives": [{ "confidence": "0.999", "content": "as" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "4.119",
+        "end_time": "4.13",
+        "alternatives": [{ "confidence": "0.999", "content": "a" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "4.139",
+        "end_time": "4.76",
+        "alternatives": [{ "confidence": "0.995", "content": "standalone" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "4.769",
+        "end_time": "5.5",
+        "alternatives": [{ "confidence": "0.997", "content": "transcription" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "5.51",
+        "end_time": "5.9",
+        "alternatives": [{ "confidence": "0.999", "content": "service" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "5.909",
+        "end_time": "6.03",
+        "alternatives": [{ "confidence": "0.997", "content": "or" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "6.039",
+        "end_time": "6.139",
+        "alternatives": [{ "confidence": "0.999", "content": "to" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "6.15",
+        "end_time": "6.36",
+        "alternatives": [{ "confidence": "0.999", "content": "add" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "6.369",
+        "end_time": "6.78",
+        "alternatives": [{ "confidence": "0.999", "content": "speech" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "6.789",
+        "end_time": "6.86",
+        "alternatives": [{ "confidence": "0.992", "content": "to" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "6.869",
+        "end_time": "7.199",
+        "alternatives": [{ "confidence": "0.995", "content": "text" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "7.21",
+        "end_time": "7.949",
+        "alternatives": [{ "confidence": "0.999", "content": "capabilities" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "7.96",
+        "end_time": "8.1",
+        "alternatives": [{ "confidence": "0.999", "content": "to" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "8.109",
+        "end_time": "8.359",
+        "alternatives": [{ "confidence": "0.999", "content": "any" }],
+        "type": "pronunciation"
+      },
+      {
+        "start_time": "8.369",
+        "end_time": "9.14",
+        "alternatives": [{ "confidence": "0.999", "content": "application" }],
+        "type": "pronunciation"
+      },
+      {
+        "alternatives": [{ "confidence": "0.0", "content": "." }],
+        "type": "punctuation"
+      }
+    ]
+  },
+  "status": "COMPLETED"
+}

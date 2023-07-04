@@ -1,17 +1,14 @@
 {
-    "name": "onramplab/laravel-package-template",
-    "description": "An laravel template",
+    "name": "onramplab/laravel-transcription",
+    "description": "A Laravel package providing transcription feature for audio file",
     "type": "library",
     "license": "MIT",
     "keywords": [
-        "template",
         "laravel",
-        "package",
-        "skeleton",
-        "boilerplate",
-        "laravel template",
-        "package template",
-        "laravel package template"
+        "transcript",
+        "transcription",
+        "speech to text",
+        "audio processing"
     ],
     "authors": [
         {
@@ -22,8 +19,9 @@
     "minimum-stability": "dev",
     "prefer-stable": true,
     "require": {
-        "php": ">=8.0",
-        "illuminate/support": "^8.0|^9.0"
+        "php": ">=8.1",
+        "aws/aws-sdk-php": "^3.269",
+        "illuminate/database": "^8.0|^9.0"
     },
     "require-dev": {
         "mockery/mockery": "^1.5",
@@ -40,12 +38,13 @@
     },
     "autoload": {
         "psr-4": {
-            "OnrampLab\\LaravelPackageTemplate\\": "src/"
+            "OnrampLab\\Transcription\\": "src/",
+            "OnrampLab\\Transcription\\Database\\Factories\\": "database/factories"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "OnrampLab\\LaravelPackageTemplate\\Tests\\": "tests"
+            "OnrampLab\\Transcription\\Tests\\": "tests"
         }
     },
     "extra": {
@@ -54,7 +53,7 @@
         },
         "laravel": {
             "providers": [
-                "OnrampLab\\LaravelPackageTemplate\\LaravelPackageTemplateServiceProvider"
+                "OnrampLab\\Transcription\\TranscriptionServiceProvider"
             ]
         }
     },
