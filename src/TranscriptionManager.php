@@ -13,6 +13,7 @@ use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
+use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class TranscriptionManager implements TranscriptionManagerContract
 {
@@ -65,16 +66,19 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Confirm asynchronous transcription process
      */
-    public function confirm(Transcript $transcript): Transcript
+    public function confirm(string $type, string $externalId): Transcript
     {
-        $providerName = Str::snake(Str::camel($transcript->type));
+        $providerName = Str::snake(Str::camel($type));
         $provider = $this->resolveProvider($providerName);
 
         if (!$provider instanceof Confirmable) {
             throw new Exception("The [{$providerName}] transcription provider is not confirmable.");
         }
 
-        $transcription = $provider->fetch($transcript->external_id);
+        $transcript = Transcript::where('type', $type)
+            ->where('external_id', $externalId)
+            ->firstOrFail();
+        $transcription = $provider->fetch($externalId);
 
         if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
             $provider->parse($transcription, $transcript);

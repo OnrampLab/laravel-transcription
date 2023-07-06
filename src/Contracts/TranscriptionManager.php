@@ -15,5 +15,5 @@ interface TranscriptionManager
     /**
      * Confirm asynchronous transcription process
      */
-    public function confirm(Transcript $transcript): Transcript;
+    public function confirm(string $type, string $externalId): Transcript;
 }

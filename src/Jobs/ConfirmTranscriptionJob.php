@@ -44,7 +44,7 @@ class ConfirmTranscriptionJob implements ShouldQueue
     public function handle(
         TranscriptionManager $manager,
     ) {
-        $transcript = $manager->confirm($this->transcript);
+        $transcript = $manager->confirm($this->transcript->type, $this->transcript->external_id);
 
         if (!$transcript->isFinished()) {
             /** @var int $interval */

@@ -85,4 +85,40 @@ class TranscriptionManagerTest extends TestCase
             Queue::assertNotPushed(ConfirmTranscriptionJob::class);
         }
     }
+
+    /**
+     * @test
+     */
+    public function confirm_should_work(): void
+    {
+        $transcript = Transcript::factory()->create([
+            'type' => Str::kebab(Str::camel('confirmable_provider')),
+            'external_id' => Str::uuid()->toString(),
+            'status' => TranscriptionStatusEnum::PROCESSING,
+        ]);
+        $transcription = new Transcription([
+            'id' => $transcript->external_id,
+            'status' => TranscriptionStatusEnum::COMPLETED,
+        ]);
+
+        $this->confirmableProviderMock
+            ->shouldReceive('fetch')
+            ->once()
+            ->with($transcript->external_id)
+            ->andReturn($transcription);
+
+        $this->confirmableProviderMock
+            ->shouldReceive('parse')
+            ->once()
+            ->withArgs(function (...$args) use ($transcription, $transcript) {
+                return $args[0]->id === $transcription->id
+                    && $args[1]->id === $transcript->id;
+            });
+
+        $this->manager->confirm($transcript->type, $transcript->external_id);
+
+        $transcript->refresh();
+
+        $this->assertEquals($transcript->status, $transcription->status->value);
+    }
 }
