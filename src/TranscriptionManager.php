@@ -81,14 +81,7 @@ class TranscriptionManager implements TranscriptionManagerContract
             ->firstOrFail();
         $transcription = $provider->fetch($externalId);
 
-        if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
-            $provider->parse($transcription, $transcript);
-        }
-
-        $transcript->status = $transcription->status->value;
-        $transcript->save();
-
-        return $transcript;
+        return $this->parse($transcription, $transcript, $provider);
     }
 
     /**
@@ -110,6 +103,14 @@ class TranscriptionManager implements TranscriptionManagerContract
             ->where('external_id', $transcription->id)
             ->firstOrFail();
 
+        return $this->parse($transcription, $transcript, $provider);
+    }
+
+    /**
+     * Parse transcription object and update result to transcript model.
+     */
+    protected function parse(Transcription $transcription, Transcript $transcript, TranscriptionProvider $provider): Transcript
+    {
         if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
             $provider->parse($transcription, $transcript);
         }
