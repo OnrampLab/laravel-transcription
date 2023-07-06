@@ -13,11 +13,6 @@ interface TranscriptionProvider
     public function transcribe(string $audioUrl, string $languageCode): Transcription;
 
     /**
-     * Fetch transcription data from third-party service.
-     */
-    public function fetch(string $id): Transcription;
-
-    /**
      * Parse transcripts result of transcription and persist them into database.
      */
     public function parse(Transcription $transcription, Transcript $transcript): void;

@@ -3,9 +3,11 @@
 namespace OnrampLab\Transcription;
 
 use Closure;
+use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
@@ -65,6 +67,11 @@ class TranscriptionManager implements TranscriptionManagerContract
     {
         $providerName = Str::snake(Str::camel($transcript->type));
         $provider = $this->resolveProvider($providerName);
+
+        if (!$provider instanceof Confirmable) {
+            throw new Exception("The [{$providerName}] transcription provider is not confirmable.");
+        }
+
         $transcription = $provider->fetch($transcript->external_id);
 
         if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
