@@ -56,8 +56,10 @@ class TranscriptionManager implements TranscriptionManagerContract
             'language_code' => $languageCode,
         ]);
 
-        ConfirmTranscriptionJob::dispatch($transcript)
-            ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
+        if ($provider instanceof Confirmable) {
+            ConfirmTranscriptionJob::dispatch($transcript)
+                ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
+        }
     }
 
     /**
