@@ -7,6 +7,7 @@ use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
@@ -79,6 +80,35 @@ class TranscriptionManager implements TranscriptionManagerContract
             ->where('external_id', $externalId)
             ->firstOrFail();
         $transcription = $provider->fetch($externalId);
+
+        if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
+            $provider->parse($transcription, $transcript);
+        }
+
+        $transcript->status = $transcription->status->value;
+        $transcript->save();
+
+        return $transcript;
+    }
+
+    /**
+     * Execute asynchronous transcription callback
+     */
+    public function callback(string $type, array $requestHeader, array $requestBody): Transcript
+    {
+        $providerName = Str::snake(Str::camel($type));
+        $provider = $this->resolveProvider($providerName);
+
+        if (!$provider instanceof Callbackable) {
+            throw new Exception("The [{$providerName}] transcription provider is not callbackable.");
+        }
+
+        $provider->validate($requestHeader, $requestBody);
+
+        $transcription = $provider->process($requestHeader, $requestBody);
+        $transcript = Transcript::where('type', $type)
+            ->where('external_id', $transcription->id)
+            ->firstOrFail();
 
         if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
             $provider->parse($transcription, $transcript);

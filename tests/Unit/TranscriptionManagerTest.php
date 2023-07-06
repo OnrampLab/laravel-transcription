@@ -121,4 +121,59 @@ class TranscriptionManagerTest extends TestCase
 
         $this->assertEquals($transcript->status, $transcription->status->value);
     }
+
+    /**
+     * @test
+     */
+    public function callback_should_work(): void
+    {
+        $transcript = Transcript::factory()->create([
+            'type' => Str::kebab(Str::camel('callbackable_provider')),
+            'external_id' => Str::uuid()->toString(),
+            'status' => TranscriptionStatusEnum::PROCESSING,
+        ]);
+        $transcription = new Transcription([
+            'id' => $transcript->external_id,
+            'status' => TranscriptionStatusEnum::COMPLETED,
+        ]);
+
+        $requestHeader = [
+            'host' => ['www.example.com'],
+            'connection' => ['keep-alive'],
+            'user-agent' => ['Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'],
+        ];
+        $requestBody = [
+            'id' => $transcript->external_id,
+            'status' => 'completed',
+            'transcript' => [
+                'text' => 'Hello Word.',
+            ],
+        ];
+
+        $this->callbackableProviderMock
+            ->shouldReceive('validate')
+            ->once()
+            ->with($requestHeader, $requestBody)
+            ->andReturn($transcription);
+
+        $this->callbackableProviderMock
+            ->shouldReceive('process')
+            ->once()
+            ->with($requestHeader, $requestBody)
+            ->andReturn($transcription);
+
+        $this->callbackableProviderMock
+            ->shouldReceive('parse')
+            ->once()
+            ->withArgs(function (...$args) use ($transcription, $transcript) {
+                return $args[0]->id === $transcription->id
+                    && $args[1]->id === $transcript->id;
+            });
+
+        $this->manager->callback($transcript->type, $requestHeader, $requestBody);
+
+        $transcript->refresh();
+
+        $this->assertEquals($transcript->status, $transcription->status->value);
+    }
 }
