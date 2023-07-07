@@ -59,7 +59,7 @@ class TranscriptionManager implements TranscriptionManagerContract
         ]);
 
         if ($provider instanceof Confirmable) {
-            ConfirmTranscriptionJob::dispatch($transcript)
+            ConfirmTranscriptionJob::dispatch($transcript->type, $transcript->external_id)
                 ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
         }
     }
