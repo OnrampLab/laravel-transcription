@@ -3,14 +3,18 @@
 namespace OnrampLab\Transcription;
 
 use Closure;
+use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\Callbackable;
+use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
+use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class TranscriptionManager implements TranscriptionManagerContract
 {
@@ -54,19 +58,59 @@ class TranscriptionManager implements TranscriptionManagerContract
             'language_code' => $languageCode,
         ]);
 
-        ConfirmTranscriptionJob::dispatch($transcript)
-            ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
+        if ($provider instanceof Confirmable) {
+            ConfirmTranscriptionJob::dispatch($transcript->type, $transcript->external_id)
+                ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
+        }
     }
 
     /**
      * Confirm asynchronous transcription process
      */
-    public function confirm(Transcript $transcript): Transcript
+    public function confirm(string $type, string $externalId): Transcript
     {
-        $providerName = Str::snake(Str::camel($transcript->type));
+        $providerName = Str::snake(Str::camel($type));
         $provider = $this->resolveProvider($providerName);
-        $transcription = $provider->fetch($transcript->external_id);
 
+        if (!$provider instanceof Confirmable) {
+            throw new Exception("The [{$providerName}] transcription provider is not confirmable.");
+        }
+
+        $transcript = Transcript::where('type', $type)
+            ->where('external_id', $externalId)
+            ->firstOrFail();
+        $transcription = $provider->fetch($externalId);
+
+        return $this->parse($transcription, $transcript, $provider);
+    }
+
+    /**
+     * Execute asynchronous transcription callback
+     */
+    public function callback(string $type, array $requestHeader, array $requestBody): Transcript
+    {
+        $providerName = Str::snake(Str::camel($type));
+        $provider = $this->resolveProvider($providerName);
+
+        if (!$provider instanceof Callbackable) {
+            throw new Exception("The [{$providerName}] transcription provider is not callbackable.");
+        }
+
+        $provider->validate($requestHeader, $requestBody);
+
+        $transcription = $provider->process($requestHeader, $requestBody);
+        $transcript = Transcript::where('type', $type)
+            ->where('external_id', $transcription->id)
+            ->firstOrFail();
+
+        return $this->parse($transcription, $transcript, $provider);
+    }
+
+    /**
+     * Parse transcription object and update result to transcript model.
+     */
+    protected function parse(Transcription $transcription, Transcript $transcript, TranscriptionProvider $provider): Transcript
+    {
         if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
             $provider->parse($transcription, $transcript);
         }

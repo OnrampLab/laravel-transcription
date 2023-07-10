@@ -51,4 +51,18 @@ return [
         'interval' => 600,
         'queue' => 'default',
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Callback Route
+    |--------------------------------------------------------------------------
+    |
+    | These options configure the setting of callback route so you can decide
+    | the route prefix and the route middleware.
+    |
+    */
+    'callback' => [
+        'prefix' => 'api',
+        'middleware' => ['api'],
+    ],
 ];
