@@ -10,7 +10,7 @@ interface TranscriptionManager
     /**
      * Make transcription for audio file in specific language
      */
-    public function make(string $audioUrl, string $languageCode, ?string $providerName = null): void;
+    public function make(string $audioUrl, string $languageCode, ?string $providerName = null): Transcript;
 
     /**
      * Confirm asynchronous transcription process

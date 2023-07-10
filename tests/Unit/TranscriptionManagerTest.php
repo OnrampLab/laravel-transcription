@@ -71,9 +71,7 @@ class TranscriptionManagerTest extends TestCase
             ->with($audioUrl, $languageCode)
             ->andReturn($transcription);
 
-        $this->manager->make($audioUrl, $languageCode);
-
-        $transcript = Transcript::latest()->first();
+        $transcript = $this->manager->make($audioUrl, $languageCode);
 
         $this->assertEquals($transcript->type, Str::kebab(Str::camel($providerName)));
         $this->assertEquals($transcript->external_id, $transcription->id);

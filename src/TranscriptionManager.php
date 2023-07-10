@@ -44,7 +44,7 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Make transcription for audio file in specific language
      */
-    public function make(string $audioUrl, string $languageCode, ?string $providerName = null): void
+    public function make(string $audioUrl, string $languageCode, ?string $providerName = null): Transcript
     {
         $type = Str::kebab(Str::camel($providerName ?: $this->getDefaultProvider()));
         $provider = $this->resolveProvider($providerName);
@@ -62,6 +62,8 @@ class TranscriptionManager implements TranscriptionManagerContract
             ConfirmTranscriptionJob::dispatch($transcript->type, $transcript->external_id)
                 ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
         }
+
+        return $transcript;
     }
 
     /**
