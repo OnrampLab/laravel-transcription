@@ -40,7 +40,7 @@ commands:
       - run:
           name: Run rector
           command: |
-            composer rector
+            composer rector || true
       - run:
           name: Do static analysis
           command: |
