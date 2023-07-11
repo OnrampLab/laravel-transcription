@@ -129,13 +129,13 @@ class TranscriptionManager implements TranscriptionManagerContract
     protected function resolveProvider(?string $providerName): TranscriptionProvider
     {
         $config = $this->getProviderConfig($providerName);
-        $name = $config['driver'];
+        $driverName = $config['driver'];
 
-        if (! isset($this->providers[$name])) {
-            throw new InvalidArgumentException("No transcription provider for [{$name}].");
+        if (! isset($this->providers[$driverName])) {
+            throw new InvalidArgumentException("No transcription provider with [{$driverName}] driver.");
         }
 
-        return call_user_func($this->providers[$name], $config);
+        return call_user_func($this->providers[$driverName], $config);
     }
 
     /**
@@ -143,11 +143,11 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     protected function getProviderConfig(?string $providerName): array
     {
-        $name = $providerName ?: $this->getDefaultProvider();
-        $config = $this->app['config']["transcription.providers.{$name}"] ?? null;
+        $providerName = $providerName ?: $this->getDefaultProvider();
+        $config = $this->app['config']["transcription.providers.{$providerName}"] ?? null;
 
         if (is_null($config)) {
-            throw new InvalidArgumentException("The [{$name}] transcription provider has not been configured.");
+            throw new InvalidArgumentException("The [{$providerName}] transcription provider has not been configured.");
         }
 
         return $config;
