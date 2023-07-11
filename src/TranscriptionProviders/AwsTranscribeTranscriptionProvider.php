@@ -112,7 +112,7 @@ class AwsTranscribeTranscriptionProvider implements TranscriptionProvider, Confi
         throw new InvalidArgumentException('Provided URL is not a valid Amazon S3 bucket URL');
     }
 
-    private function convertUrl(string $url, string $sourceSchema, $targetSchema): string
+    private function convertUrl(string $url, string $sourceSchema, string $targetSchema): string
     {
         $pattern = $this->getUrlPattern($sourceSchema);
         $isMatched = preg_match($pattern, $url, $matches);
@@ -166,7 +166,7 @@ class AwsTranscribeTranscriptionProvider implements TranscriptionProvider, Confi
     {
         $words = Collection::make([]);
 
-        Collection::make($transcription->result['results']['items'])
+        Collection::make(data_get($transcription->result, 'results.items'))
             ->each(function (array $item) use (&$words, $transcript) {
                 $type = $item['type'];
                 $words = match ($item['type']) {
