@@ -21,6 +21,8 @@ return new class extends Migration
             $table->enum('status', ['processing', 'failed', 'completed']);
             $table->string('audio_file_url', 500);
             $table->string('language_code');
+
+            $table->unique(['type', 'external_id']);
         });
     }
 
