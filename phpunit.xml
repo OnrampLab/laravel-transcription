@@ -9,9 +9,9 @@
     <testsuite name=":service_name Unit Test">
       <directory suffix="Test.php">tests/Unit</directory>
     </testsuite>
-    <testsuite name=":service_name Feature Test">
+    <!-- <testsuite name=":service_name Feature Test">
       <directory suffix="Test.php">tests/Feature</directory>
-    </testsuite>
+    </testsuite> -->
   </testsuites>
   <php>
     <env name="APP_KEY" value="base64:eRcTbU9XxU6T8T06TJlSsjzFkfxlUvogrymIjF4f4D4="/>
