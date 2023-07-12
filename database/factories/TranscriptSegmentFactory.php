@@ -24,8 +24,8 @@ class TranscriptSegmentFactory extends Factory
     {
         return [
             'transcript_id'=> Transcript::factory(),
-            'start_time'=> $this->faker->time(),
-            'end_time'=> $this->faker->time(),
+            'start_time'=> $this->faker->time('H:i:s.v'),
+            'end_time'=> $this->faker->time('H:i:s.v'),
             'content'=> $this->faker->sentence(),
             'words'=> [],
         ];

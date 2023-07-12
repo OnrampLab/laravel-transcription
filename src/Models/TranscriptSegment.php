@@ -31,8 +31,6 @@ class TranscriptSegment extends Model
      * @var array
      */
     protected $casts = [
-        'start_time' => 'datetime:H:i:s',
-        'end_time' => 'datetime:H:i:s',
         'words' => 'array',
     ];
 
