@@ -5,6 +5,7 @@ namespace OnrampLab\Transcription;
 use Closure;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use OnrampLab\Transcription\Contracts\Callbackable;
@@ -48,6 +49,11 @@ class TranscriptionManager implements TranscriptionManagerContract
     {
         $type = Str::kebab(Str::camel($providerName ?: $this->getDefaultProvider()));
         $provider = $this->resolveProvider($providerName);
+
+        if ($provider instanceof Callbackable) {
+            $provider->setUp('POST', URL::route('transcription.callback', ['type' => $type]));
+        }
+
         $transcription = $provider->transcribe($audioUrl, $languageCode);
 
         $transcript = Transcript::create([

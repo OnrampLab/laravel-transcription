@@ -40,4 +40,12 @@ class CallbackableProvider implements TranscriptionProvider, Callbackable
     {
         return new Transcription([]);
     }
+
+    /**
+     * Set up callback request's HTTP method & URL.
+     */
+    public function setUp(string $httpMethod, string $url): void
+    {
+        return;
+    }
 }

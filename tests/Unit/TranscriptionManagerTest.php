@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Mockery;
 use Mockery\MockInterface;
+use OnrampLab\Transcription\Contracts\Callbackable;
+use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
@@ -51,10 +53,10 @@ class TranscriptionManagerTest extends TestCase
 
     /**
      * @test
-     * @testWith ["confirmable_provider", true]
-     *           ["callbackable_provider", false]
+     * @testWith ["confirmable_provider"]
+     *           ["callbackable_provider"]
      */
-    public function make_should_work(string $providerName, bool $isConfirmationJobDispatched): void
+    public function make_should_work(string $providerName): void
     {
         $this->app['config']->set('transcription.default', $providerName);
 
@@ -64,8 +66,22 @@ class TranscriptionManagerTest extends TestCase
             'id' => Str::uuid(),
             'status' => TranscriptionStatusEnum::PROCESSING,
         ]);
+        /** @var MockInterface $providerMock */
+        $providerMock = $this->{Str::camel($providerName) . "Mock"};
 
-        $this->{Str::camel($providerName) . "Mock"}
+        if ($providerMock instanceof Callbackable) {
+            $callbackMethod = 'POST';
+            $callbackUrl = route('transcription.callback', ['type' => Str::kebab(Str::camel($providerName))]);
+
+            $providerMock
+                ->shouldReceive('setUp')
+                ->once()
+                ->with($callbackMethod, $callbackUrl);
+        } else {
+            $providerMock->shouldNotReceive('setUp');
+        }
+
+        $providerMock
             ->shouldReceive('transcribe')
             ->once()
             ->with($audioUrl, $languageCode)
@@ -77,7 +93,7 @@ class TranscriptionManagerTest extends TestCase
         $this->assertEquals($transcript->external_id, $transcription->id);
         $this->assertEquals($transcript->status, $transcription->status->value);
 
-        if ($isConfirmationJobDispatched) {
+        if ($providerMock instanceof Confirmable) {
             Queue::assertPushed(ConfirmTranscriptionJob::class);
         } else {
             Queue::assertNotPushed(ConfirmTranscriptionJob::class);
