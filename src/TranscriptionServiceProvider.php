@@ -38,8 +38,10 @@ class TranscriptionServiceProvider extends ServiceProvider
 
     protected function registerTranscriptionManager(): void
     {
-        $this->app->singleton(TranscriptionManagerContract::class, function ($app) {
-            $this->registerTranscriptionProviders(new TranscriptionManager($app));
+        $this->app->singleton('transcription', function ($app) {
+            return tap(new TranscriptionManager($app), function ($manager) {
+                $this->registerTranscriptionProviders($manager);
+            });
         });
     }
 

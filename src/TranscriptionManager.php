@@ -5,6 +5,7 @@ namespace OnrampLab\Transcription;
 use Closure;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use OnrampLab\Transcription\Contracts\Callbackable;
@@ -44,10 +45,15 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Make transcription for audio file in specific language
      */
-    public function make(string $audioUrl, string $languageCode, ?string $providerName = null): void
+    public function make(string $audioUrl, string $languageCode, ?string $providerName = null): Transcript
     {
         $type = Str::kebab(Str::camel($providerName ?: $this->getDefaultProvider()));
         $provider = $this->resolveProvider($providerName);
+
+        if ($provider instanceof Callbackable) {
+            $provider->setUp('POST', URL::route('transcription.callback', ['type' => $type]));
+        }
+
         $transcription = $provider->transcribe($audioUrl, $languageCode);
 
         $transcript = Transcript::create([
@@ -62,6 +68,8 @@ class TranscriptionManager implements TranscriptionManagerContract
             ConfirmTranscriptionJob::dispatch($transcript->type, $transcript->external_id)
                 ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
         }
+
+        return $transcript;
     }
 
     /**
@@ -127,13 +135,13 @@ class TranscriptionManager implements TranscriptionManagerContract
     protected function resolveProvider(?string $providerName): TranscriptionProvider
     {
         $config = $this->getProviderConfig($providerName);
-        $name = $config['driver'];
+        $driverName = $config['driver'];
 
-        if (! isset($this->providers[$name])) {
-            throw new InvalidArgumentException("No transcription provider for [{$name}].");
+        if (! isset($this->providers[$driverName])) {
+            throw new InvalidArgumentException("No transcription provider with [{$driverName}] driver.");
         }
 
-        return call_user_func($this->providers[$name], $config);
+        return call_user_func($this->providers[$driverName], $config);
     }
 
     /**
@@ -141,11 +149,11 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     protected function getProviderConfig(?string $providerName): array
     {
-        $name = $providerName ?: $this->getDefaultProvider();
-        $config = $this->app['config']["transcription.providers.{$name}"] ?? null;
+        $providerName = $providerName ?: $this->getDefaultProvider();
+        $config = $this->app['config']["transcription.providers.{$providerName}"] ?? null;
 
         if (is_null($config)) {
-            throw new InvalidArgumentException("The [{$name}] transcription provider has not been configured.");
+            throw new InvalidArgumentException("The [{$providerName}] transcription provider has not been configured.");
         }
 
         return $config;

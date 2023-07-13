@@ -15,7 +15,7 @@ class TranscriptSegment extends Model
     /**
      * The attributes that are mass assignable.
      *
-     * @var array
+     * @var array<string>
      */
     protected $fillable = [
         'transcript_id',
@@ -31,8 +31,6 @@ class TranscriptSegment extends Model
      * @var array
      */
     protected $casts = [
-        'start_time' => 'datetime:H:i:s',
-        'end_time' => 'datetime:H:i:s',
         'words' => 'array',
     ];
 

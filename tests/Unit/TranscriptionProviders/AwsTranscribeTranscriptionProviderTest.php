@@ -159,10 +159,10 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
 
         $this->assertEquals($transcript->segments->count(), 2);
         $this->assertEquals($transcript->segments[0]->content, 'Welcome to Amazon transcribe.');
-        $this->assertEquals($transcript->segments[0]->start_time->toTimeString(), '00:00:00');
-        $this->assertEquals($transcript->segments[0]->end_time->toTimeString(), '00:00:01');
+        $this->assertEquals($transcript->segments[0]->start_time, '00:00:00');
+        $this->assertEquals($transcript->segments[0]->end_time, '00:00:01');
         $this->assertEquals($transcript->segments[1]->content, 'You can use Amazon transcribe as a standalone transcription service or to add speech to text capabilities to any application.');
-        $this->assertEquals($transcript->segments[1]->start_time->toTimeString(), '00:00:02');
-        $this->assertEquals($transcript->segments[1]->end_time->toTimeString(), '00:00:09');
+        $this->assertEquals($transcript->segments[1]->start_time, '00:00:02');
+        $this->assertEquals($transcript->segments[1]->end_time, '00:00:09');
     }
 }

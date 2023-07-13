@@ -10,7 +10,7 @@ return [
     |
     */
 
-    'default' => env('TRANSCRIPTION_PROVIDER'),
+    'default' => env('TRANSCRIPTION_PROVIDER', 'aws_transcribe'),
 
     /*
     |--------------------------------------------------------------------------

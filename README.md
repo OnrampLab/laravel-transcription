@@ -13,12 +13,8 @@ A Laravel package providing transcription feature for audio file
 
 ## Features
 
-- PSR-4 autoloading compliant structure;
-- PSR-2 compliant code style;
-- Unit-Testing with PHPUnit 6;
-- Comprehensive guide and tutorial;
-- Easy to use with any framework or even a plain php file;
-- Useful tools for better code included.
+- Support multiple types of third-party transcription service
+  - AWS Transcribe
 
 ## Installation
 
@@ -26,21 +22,33 @@ A Laravel package providing transcription feature for audio file
 composer require onramplab/laravel-transcription
 ```
 
-This will create a basic project structure for you:
+Publish migration files and run command to build tables needed in package
 
-* **/build** is used to store code coverage output by default;
-* **/src** is where your codes will live in, each class will need to reside in its own file inside this folder;
-* **/tests** each class that you write in src folder needs to be tested before it was even "included" into somewhere else. So basically we have tests classes there to test other classes;
-* **.gitignore** there are certain files that we don't want to publish in Git, so we just add them to this fle for them to "get ignored by git";
-* **CHANGELOG.md** to keep track of package updates;
-* **CONTRIBUTION.md** Contributor Covenant Code of Conduct;
-* **LICENSE** terms of how much freedom other programmers is allowed to use this library;
-* **README.md** it is a mini documentation of the library, this is usually the "home page" of your repo if you published it on GitHub and Packagist;
-* **composer.json** is where the information about your library is stored, like package name, author and dependencies;
-* **phpunit.xml** It is a configuration file of PHPUnit, so that tests classes will be able to test the classes you've written;
-* **.travis.yml** basic configuration for Travis CI with configured test coverage reporting for code climate.
+```bash
+php artisan vendor:publish --tag="transcription-migrations"
+php artisan migrate
+```
 
-Please refer to original [article](http://www.darwinbiler.com/creating-composer-package-library/) for more information.
+Also, you can choose to publish the configuration file
+
+```bash
+php artisan vendor:publish --tag="transcription-config"
+```
+
+## Configuration
+
+1. Set up credentials for provider you want to use for transcription in your `config/transcription.php` configuration file.
+
+## Usage
+
+### Create transcription for audio file
+
+```php
+Transcription::make('https://www.example.com/audio/test.wav', 'en-US');
+```
+
+The `Transcription` facade's `make` method is used to start a asynchronous transcription process. The first argument is the URL that can located the audio file you want to transcribe, and second argument is the language of the supplied audio as a [BCP-47](https://www.rfc-editor.org/rfc/bcp/bcp47.txt) language tag.
+
 
 ## Useful Tools
 

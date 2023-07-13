@@ -3,7 +3,7 @@
 namespace OnrampLab\Transcription\Tests\Unit\Http\Controllers;
 
 use Illuminate\Http\Response;
-use OnrampLab\Transcription\Contracts\TranscriptionManager;
+use OnrampLab\Transcription\Facades\Transcription;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Tests\TestCase;
 
@@ -50,19 +50,13 @@ class TranscriptionControllerTest extends TestCase
             ],
         ];
 
-        $this->mock(
-            TranscriptionManager::class,
-            function ($mock) use ($payload) {
-                $mock
-                    ->shouldReceive('callback')
-                    ->once()
-                    ->withArgs(function (string $type, array $requestHeader, array $requestBody) use ($payload) {
-                        return $type === $this->type
-                            && $requestBody == $payload;
-                    })
-                    ->andReturn($this->transcript);
-            },
-        );
+        Transcription::shouldReceive('callback')
+            ->once()
+            ->withArgs(function (string $type, array $requestHeader, array $requestBody) use ($payload) {
+                return $type === $this->type
+                    && $requestBody == $payload;
+            })
+            ->andReturn($this->transcript);
 
         $response = $this->post($url, $payload);
         $response->assertStatus(Response::HTTP_OK);
