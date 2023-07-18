@@ -36,6 +36,38 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Redaction
+    |--------------------------------------------------------------------------
+    |
+    | | Default Detector Name
+    |
+    | Here you may define a default PII entity detector.
+    |
+    |--------------------------------------------------------------------------
+    |
+    | | Available Detectors
+    |
+    | Here you may configure the PII entity detectors information for each service
+    | that is used by your application. You are free to add additional detectors
+    | as required.
+    |
+    | Supported drivers: "aws_comprehend"
+    |
+    */
+    'redaction' => [
+        'default' => env('TRANSCRIPTION_DETECTOR', 'aws_comprehend'),
+        'detectors' => [
+            'aws_comprehend' => [
+                'driver' => 'aws_comprehend',
+                'access_key' => env('AWS_ACCESS_KEY_ID'),
+                'access_secret' => env('AWS_SECRET_ACCESS_KEY'),
+                'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Confirmation Job
     |--------------------------------------------------------------------------
     |
