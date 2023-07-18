@@ -4,7 +4,7 @@ namespace OnrampLab\Transcription;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
+use OnrampLab\Transcription\PiiEntityDetectors\AwsComprehendPiiEntityDetector;
 use OnrampLab\Transcription\TranscriptionManager;
 use OnrampLab\Transcription\TranscriptionProviders\AwsTranscribeTranscriptionProvider;
 
@@ -41,6 +41,7 @@ class TranscriptionServiceProvider extends ServiceProvider
         $this->app->singleton('transcription', function ($app) {
             return tap(new TranscriptionManager($app), function ($manager) {
                 $this->registerTranscriptionProviders($manager);
+                $this->registerPiiEntityDetectors($manager);
             });
         });
     }
@@ -53,6 +54,16 @@ class TranscriptionServiceProvider extends ServiceProvider
     protected function registerAwsTranscribeTranscriptionProvider(TranscriptionManager $manager): void
     {
         $manager->addProvider('aws_transcribe', fn (array $config) => new AwsTranscribeTranscriptionProvider($config));
+    }
+
+    protected function registerPiiEntityDetectors(TranscriptionManager $manager): void
+    {
+        $this->registerAwsComprehendPiiEntityDetector($manager);
+    }
+
+    protected function registerAwsComprehendPiiEntityDetector(TranscriptionManager $manager): void
+    {
+        $manager->addProvider('aws_comprehend', fn (array $config) => new AwsComprehendPiiEntityDetector($config));
     }
 
     protected function registerTranscriptionCallbackRoute(): void
