@@ -10,6 +10,7 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
+use OnrampLab\Transcription\Contracts\PiiEntityDetector;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
@@ -29,6 +30,11 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     protected array $providers = [];
 
+    /**
+     * The array of resolved PII entity detectors.
+     */
+    protected array $detectors = [];
+
     public function __construct(Application $app)
     {
         $this->app = $app;
@@ -43,11 +49,19 @@ class TranscriptionManager implements TranscriptionManagerContract
     }
 
     /**
+     * Add a PII entity detector resolver.
+     */
+    public function addDetector(string $driverName, Closure $resolver): void
+    {
+        $this->detectors[$driverName] = $resolver;
+    }
+
+    /**
      * Make transcription for audio file in specific language
      */
     public function make(string $audioUrl, string $languageCode, ?string $providerName = null): Transcript
     {
-        $type = Str::kebab(Str::camel($providerName ?: $this->getDefaultProvider()));
+        $type = Str::kebab(Str::camel($providerName ?: $this->getDefaultProcessor('transcription')));
         $provider = $this->resolveProvider($providerName);
 
         if ($provider instanceof Callbackable) {
@@ -134,7 +148,7 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     protected function resolveProvider(?string $providerName): TranscriptionProvider
     {
-        $config = $this->getProviderConfig($providerName);
+        $config = $this->getProcessorConfig('transcription', 'provider', $providerName);
         $driverName = $config['driver'];
 
         if (! isset($this->providers[$driverName])) {
@@ -145,25 +159,40 @@ class TranscriptionManager implements TranscriptionManagerContract
     }
 
     /**
-     * Get the transcription provider configuration.
+     * Resolve a PII entity detector.
      */
-    protected function getProviderConfig(?string $providerName): array
+    protected function resolveDetector(?string $providerName): PiiEntityDetector
     {
-        $providerName = $providerName ?: $this->getDefaultProvider();
-        $config = $this->app['config']["transcription.transcription.providers.{$providerName}"] ?? null;
+        $config = $this->getProcessorConfig('redaction', 'detector', $providerName);
+        $driverName = $config['driver'];
+
+        if (! isset($this->detectors[$driverName])) {
+            throw new InvalidArgumentException("No redaction detector with [{$driverName}] driver.");
+        }
+
+        return call_user_func($this->detectors[$driverName], $config);
+    }
+
+    /**
+     * Get the processor configuration.
+     */
+    protected function getProcessorConfig(string $featureName, string $processorType, ?string $processorName): array
+    {
+        $processorName = $processorName ?: $this->getDefaultProcessor($featureName);
+        $config = $this->app['config']["transcription.{$featureName}.{$processorType}s.{$processorName}"] ?? null;
 
         if (is_null($config)) {
-            throw new InvalidArgumentException("The [{$providerName}] transcription provider has not been configured.");
+            throw new InvalidArgumentException("The [{$processorName}] {$featureName} {$processorType} has not been configured.");
         }
 
         return $config;
     }
 
     /**
-     * Get the name of default transcription provider.
+     * Get the name of default processor.
      */
-    protected function getDefaultProvider(): string
+    protected function getDefaultProcessor(string $featureName): string
     {
-        return $this->app['config']['transcription.transcription.default'] ?? '';
+        return $this->app['config']["transcription.{$featureName}.default"] ?? '';
     }
 }
