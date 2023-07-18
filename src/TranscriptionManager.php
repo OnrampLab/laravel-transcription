@@ -150,7 +150,7 @@ class TranscriptionManager implements TranscriptionManagerContract
     protected function getProviderConfig(?string $providerName): array
     {
         $providerName = $providerName ?: $this->getDefaultProvider();
-        $config = $this->app['config']["transcription.providers.{$providerName}"] ?? null;
+        $config = $this->app['config']["transcription.transcription.providers.{$providerName}"] ?? null;
 
         if (is_null($config)) {
             throw new InvalidArgumentException("The [{$providerName}] transcription provider has not been configured.");
@@ -164,6 +164,6 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     protected function getDefaultProvider(): string
     {
-        return $this->app['config']['transcription.default'] ?? '';
+        return $this->app['config']['transcription.transcription.default'] ?? '';
     }
 }

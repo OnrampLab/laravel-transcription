@@ -33,8 +33,8 @@ class TranscriptionManagerTest extends TestCase
     {
         parent::defineEnvironment($app);
 
-        $app['config']->set('transcription.providers.confirmable_provider', ['driver' => 'confirmable_driver']);
-        $app['config']->set('transcription.providers.callbackable_provider', ['driver' => 'callbackable_driver']);
+        $app['config']->set('transcription.transcription.providers.confirmable_provider', ['driver' => 'confirmable_driver']);
+        $app['config']->set('transcription.transcription.providers.callbackable_provider', ['driver' => 'callbackable_driver']);
     }
 
     protected function setUp(): void
@@ -58,7 +58,7 @@ class TranscriptionManagerTest extends TestCase
      */
     public function make_should_work(string $providerName): void
     {
-        $this->app['config']->set('transcription.default', $providerName);
+        $this->app['config']->set('transcription.transcription.default', $providerName);
 
         $audioUrl = 'https://www.example.com/audio/test.wav';
         $languageCode = 'en-US';
