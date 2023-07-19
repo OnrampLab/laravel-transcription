@@ -3,7 +3,6 @@
 namespace OnrampLab\Transcription\Contracts;
 
 use OnrampLab\Transcription\Models\Transcript;
-use OnrampLab\Transcription\ValueObjects\Transcription;
 
 interface TranscriptionManager
 {
@@ -21,4 +20,9 @@ interface TranscriptionManager
      * Execute asynchronous transcription callback
      */
     public function callback(string $type, array $requestHeader, array $requestBody): Transcript;
+
+    /**
+     * Redact personally identifiable information (PII) content within transcript
+     */
+    public function redact(Transcript $transcript, ?string $detectorName = null): void;
 }

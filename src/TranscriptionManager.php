@@ -5,6 +5,7 @@ namespace OnrampLab\Transcription;
 use Closure;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -16,6 +17,8 @@ use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
+use OnrampLab\Transcription\Models\TranscriptSegment;
+use OnrampLab\Transcription\ValueObjects\PiiEntity;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class TranscriptionManager implements TranscriptionManagerContract
@@ -126,6 +129,47 @@ class TranscriptionManager implements TranscriptionManagerContract
             ->firstOrFail();
 
         return $this->parse($transcription, $transcript, $provider);
+    }
+
+    /**
+     * Redact personally identifiable information (PII) content within transcript
+     */
+    public function redact(Transcript $transcript, ?string $detectorName = null): void
+    {
+        if (!$transcript->is_redacted) {
+            return;
+        }
+
+        $detector = $this->resolveDetector($detectorName);
+        $languageCode = $transcript->language_code;
+        $transcript->segments
+            ->chunk(5)
+            ->each(function (Collection $segments) use ($detector, $languageCode) {
+                $contents = collect([]);
+                $segments->reduce(
+                    function (?TranscriptSegment $previousSegment, TranscriptSegment $currentSegment) use (&$contents) {
+                        $offset = $previousSegment ? $previousSegment->end_offset + 1 : 0;
+                        $currentSegment->start_offset = $offset;
+                        $currentSegment->end_offset = $offset + strlen($currentSegment->content);
+
+                        $contents->push($currentSegment->content);
+                        $currentSegment->content_redacted = $currentSegment->content;
+
+                        return $currentSegment;
+                    },
+                    null,
+                );
+                $entities = collect($detector->detect($contents->join("\n"), $languageCode));
+                $entities->each(function (PiiEntity $entity) use (&$segments) {
+                    $segment = $segments->first(fn (TranscriptSegment $segment) => $entity->offset >= $segment->start_offset && $entity->offset < $segment->end_offset);
+                    $segment->content_redacted = str_replace($entity->value, Str::mask($entity->value, '*', 0), $segment->content_redacted);
+                });
+                $segments->each(function (TranscriptSegment $segment) {
+                    $segment->offsetUnset('start_offset');
+                    $segment->offsetUnset('end_offset');
+                    $segment->save();
+                });
+            });
     }
 
     /**

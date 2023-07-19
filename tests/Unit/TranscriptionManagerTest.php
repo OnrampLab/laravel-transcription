@@ -8,13 +8,17 @@ use Mockery;
 use Mockery\MockInterface;
 use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
+use OnrampLab\Transcription\Enums\PiiEntityTypeEnum;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
+use OnrampLab\Transcription\Models\TranscriptSegment;
+use OnrampLab\Transcription\Tests\Classes\PiiEntityDetectors\GeneralDetector;
 use OnrampLab\Transcription\Tests\Classes\TranscriptionProviders\CallbackableProvider;
 use OnrampLab\Transcription\Tests\Classes\TranscriptionProviders\ConfirmableProvider;
 use OnrampLab\Transcription\Tests\TestCase;
 use OnrampLab\Transcription\TranscriptionManager;
+use OnrampLab\Transcription\ValueObjects\PiiEntity;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class TranscriptionManagerTest extends TestCase
@@ -22,6 +26,8 @@ class TranscriptionManagerTest extends TestCase
     private MockInterface $confirmableProviderMock;
 
     private MockInterface $callbackableProviderMock;
+
+    private MockInterface $generalDetectorMock;
 
     private TranscriptionManager $manager;
 
@@ -35,6 +41,7 @@ class TranscriptionManagerTest extends TestCase
 
         $app['config']->set('transcription.transcription.providers.confirmable_provider', ['driver' => 'confirmable_driver']);
         $app['config']->set('transcription.transcription.providers.callbackable_provider', ['driver' => 'callbackable_driver']);
+        $app['config']->set('transcription.redaction.detectors.general_detector', ['driver' => 'general_driver']);
     }
 
     protected function setUp(): void
@@ -45,10 +52,12 @@ class TranscriptionManagerTest extends TestCase
 
         $this->confirmableProviderMock = Mockery::mock(ConfirmableProvider::class);
         $this->callbackableProviderMock = Mockery::mock(CallbackableProvider::class);
+        $this->generalDetectorMock = Mockery::mock(GeneralDetector::class);
 
         $this->manager = new TranscriptionManager($this->app);
         $this->manager->addProvider('confirmable_driver', fn (array $config) => $this->confirmableProviderMock);
         $this->manager->addProvider('callbackable_driver', fn (array $config) => $this->callbackableProviderMock);
+        $this->manager->addDetector('general_driver', fn (array $config) => $this->generalDetectorMock);
     }
 
     /**
@@ -189,5 +198,56 @@ class TranscriptionManagerTest extends TestCase
         $transcript->refresh();
 
         $this->assertEquals($transcript->status, $transcription->status->value);
+    }
+
+    /**
+     * @test
+     */
+    public function redact_should_work(): void
+    {
+        $this->app['config']->set('transcription.redaction.default', 'general_detector');
+
+        $transcript = Transcript::factory()->create(['is_redacted' => true]);
+
+        TranscriptSegment::factory()->create([
+            'transcript_id' => $transcript->id,
+            'content' => 'Hi, this is Eric from Fake Service.',
+        ]);
+        TranscriptSegment::factory()->create([
+            'transcript_id' => $transcript->id,
+            'content' => 'How are you doing?',
+        ]);
+        TranscriptSegment::factory()->create([
+            'transcript_id' => $transcript->id,
+            'content' => 'Yeah, but you guys call the wrong number. This number is 123-456-7890',
+        ]);
+
+        $contents = $transcript->segments->pluck('content')->join("\n");
+        $languageCode = $transcript->language_code;
+
+        $this->generalDetectorMock
+            ->shouldReceive('detect')
+            ->once()
+            ->with($contents, $languageCode)
+            ->andReturn([
+                new PiiEntity([
+                    'type' => PiiEntityTypeEnum::NAME,
+                    'value' => 'Eric',
+                    'offset' => 12,
+                ]),
+                new PiiEntity([
+                    'type' => PiiEntityTypeEnum::PHONE_NUMBER,
+                    'value' => '123-456-7890',
+                    'offset' => 112,
+                ]),
+            ]);
+
+        $this->manager->redact($transcript);
+
+        $transcript->unsetRelations();
+
+        $this->assertEquals($transcript->segments[0]->content_redacted, 'Hi, this is **** from Fake Service.');
+        $this->assertEquals($transcript->segments[1]->content_redacted, 'How are you doing?');
+        $this->assertEquals($transcript->segments[2]->content_redacted, 'Yeah, but you guys call the wrong number. This number is ************');
     }
 }
