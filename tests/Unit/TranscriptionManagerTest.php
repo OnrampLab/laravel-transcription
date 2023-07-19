@@ -71,6 +71,7 @@ class TranscriptionManagerTest extends TestCase
 
         $audioUrl = 'https://www.example.com/audio/test.wav';
         $languageCode = 'en-US';
+        $shouldRedact = true;
         $transcription = new Transcription([
             'id' => Str::uuid(),
             'status' => TranscriptionStatusEnum::PROCESSING,
@@ -96,11 +97,12 @@ class TranscriptionManagerTest extends TestCase
             ->with($audioUrl, $languageCode)
             ->andReturn($transcription);
 
-        $transcript = $this->manager->make($audioUrl, $languageCode);
+        $transcript = $this->manager->make($audioUrl, $languageCode, $shouldRedact);
 
         $this->assertEquals($transcript->type, Str::kebab(Str::camel($providerName)));
         $this->assertEquals($transcript->external_id, $transcription->id);
         $this->assertEquals($transcript->status, $transcription->status->value);
+        $this->assertEquals($transcript->is_redacted, $shouldRedact);
 
         if ($providerMock instanceof Confirmable) {
             Queue::assertPushed(ConfirmTranscriptionJob::class);

@@ -62,7 +62,7 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Make transcription for audio file in specific language
      */
-    public function make(string $audioUrl, string $languageCode, ?string $providerName = null): Transcript
+    public function make(string $audioUrl, string $languageCode, ?bool $shouldRedact = false, ?string $providerName = null): Transcript
     {
         $type = Str::kebab(Str::camel($providerName ?: $this->getDefaultProcessor('transcription')));
         $provider = $this->resolveProvider($providerName);
@@ -79,6 +79,7 @@ class TranscriptionManager implements TranscriptionManagerContract
             'status' => $transcription->status->value,
             'audio_file_url' => $audioUrl,
             'language_code' => $languageCode,
+            'is_redacted' => $shouldRedact,
         ]);
 
         if ($provider instanceof Confirmable) {
