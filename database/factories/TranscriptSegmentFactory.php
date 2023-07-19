@@ -27,6 +27,7 @@ class TranscriptSegmentFactory extends Factory
             'start_time'=> $this->faker->time('H:i:s.v'),
             'end_time'=> $this->faker->time('H:i:s.v'),
             'content'=> $this->faker->sentence(),
+            'content_redacted' => null,
             'words'=> [],
         ];
     }

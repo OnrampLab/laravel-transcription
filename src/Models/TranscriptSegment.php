@@ -22,6 +22,7 @@ class TranscriptSegment extends Model
         'start_time',
         'end_time',
         'content',
+        'content_redacted',
         'words',
     ];
 
