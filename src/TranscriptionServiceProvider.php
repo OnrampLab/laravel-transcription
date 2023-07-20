@@ -5,6 +5,7 @@ namespace OnrampLab\Transcription;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use OnrampLab\Transcription\PiiEntityDetectors\AwsComprehendPiiEntityDetector;
+use OnrampLab\Transcription\Providers\EventServiceProvider;
 use OnrampLab\Transcription\TranscriptionManager;
 use OnrampLab\Transcription\TranscriptionProviders\AwsTranscribeTranscriptionProvider;
 
@@ -18,6 +19,7 @@ class TranscriptionServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../config/transcription.php', 'transcription');
 
         $this->registerTranscriptionManager();
+        $this->registerProviders();
     }
 
     /**
@@ -64,6 +66,11 @@ class TranscriptionServiceProvider extends ServiceProvider
     protected function registerAwsComprehendPiiEntityDetector(TranscriptionManager $manager): void
     {
         $manager->addProvider('aws_comprehend', fn (array $config) => new AwsComprehendPiiEntityDetector($config));
+    }
+
+    protected function registerProviders(): void
+    {
+        $this->app->register(EventServiceProvider::class);
     }
 
     protected function registerTranscriptionCallbackRoute(): void
