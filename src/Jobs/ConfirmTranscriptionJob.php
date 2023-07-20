@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use OnrampLab\Transcription\Contracts\TranscriptionManager;
+use OnrampLab\Transcription\Facades\Transcription;
 
 class ConfirmTranscriptionJob implements ShouldQueue
 {
@@ -41,10 +41,9 @@ class ConfirmTranscriptionJob implements ShouldQueue
      *
      * @return void
      */
-    public function handle(
-        TranscriptionManager $manager,
-    ) {
-        $transcript = $manager->confirm($this->type, $this->externalId);
+    public function handle()
+    {
+        $transcript = Transcription::confirm($this->type, $this->externalId);
 
         if (!$transcript->isFinished()) {
             /** @var int $interval */
