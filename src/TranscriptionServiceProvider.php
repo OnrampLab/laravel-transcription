@@ -4,10 +4,10 @@ namespace OnrampLab\Transcription;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
+use OnrampLab\Transcription\AudioTranscribers\AwsTranscribeAudioTranscriber;
 use OnrampLab\Transcription\PiiEntityDetectors\AwsComprehendPiiEntityDetector;
 use OnrampLab\Transcription\Providers\EventServiceProvider;
 use OnrampLab\Transcription\TranscriptionManager;
-use OnrampLab\Transcription\TranscriptionProviders\AwsTranscribeTranscriptionProvider;
 
 class TranscriptionServiceProvider extends ServiceProvider
 {
@@ -55,7 +55,7 @@ class TranscriptionServiceProvider extends ServiceProvider
 
     protected function registerAwsTranscribeTranscriptionProvider(TranscriptionManager $manager): void
     {
-        $manager->addProvider('aws_transcribe', fn (array $config) => new AwsTranscribeTranscriptionProvider($config));
+        $manager->addProvider('aws_transcribe', fn (array $config) => new AwsTranscribeAudioTranscriber($config));
     }
 
     protected function registerPiiEntityDetectors(TranscriptionManager $manager): void

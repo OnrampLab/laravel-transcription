@@ -1,6 +1,6 @@
 <?php
 
-namespace OnrampLab\Transcription\Tests\Unit\TranscriptionProviders;
+namespace OnrampLab\Transcription\Tests\Unit\AudioTranscribers;
 
 use Aws\Result;
 use Aws\TranscribeService\TranscribeServiceClient;
@@ -10,13 +10,13 @@ use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Mockery;
 use Mockery\MockInterface;
+use OnrampLab\Transcription\AudioTranscribers\AwsTranscribeAudioTranscriber as BaseAudioTranscriber;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Tests\TestCase;
-use OnrampLab\Transcription\TranscriptionProviders\AwsTranscribeTranscriptionProvider as BaseTranscriptionProvider;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
-class AwsTranscribeTranscriptionProvider extends BaseTranscriptionProvider
+class AwsTranscribeAudioTranscriber extends BaseAudioTranscriber
 {
     public function __construct(array $config, TranscribeServiceClient $client)
     {
@@ -25,7 +25,7 @@ class AwsTranscribeTranscriptionProvider extends BaseTranscriptionProvider
     }
 }
 
-class AwsTranscribeTranscriptionProviderTest extends TestCase
+class AwsTranscribeAudioTranscriberTest extends TestCase
 {
     private array $config;
 
@@ -33,7 +33,7 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
 
     private MockInterface $clientMock;
 
-    private AwsTranscribeTranscriptionProvider $provider;
+    private AwsTranscribeAudioTranscriber $transcriber;
 
     protected function setUp(): void
     {
@@ -51,7 +51,7 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
         $this->languageCode = 'en-US';
 
         $this->clientMock = Mockery::mock(TranscribeServiceClient::class);
-        $this->provider = new AwsTranscribeTranscriptionProvider($this->config, $this->clientMock);
+        $this->transcriber = new AwsTranscribeAudioTranscriber($this->config, $this->clientMock);
     }
 
     /**
@@ -82,7 +82,7 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
             })
             ->andReturn($result);
 
-        $transcription = $this->provider->transcribe($audioUrl, $this->languageCode);
+        $transcription = $this->transcriber->transcribe($audioUrl, $this->languageCode);
 
         $this->assertTrue(Str::isUuid($transcription->id));
         $this->assertEquals($transcription->status, TranscriptionStatusEnum::PROCESSING);
@@ -98,7 +98,7 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
 
         $audioUrl = 'https://www.example.com';
 
-        $this->provider->transcribe($audioUrl, $this->languageCode);
+        $this->transcriber->transcribe($audioUrl, $this->languageCode);
     }
 
     /**
@@ -134,7 +134,7 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
             },
         );
 
-        $transcription = $this->provider->fetch($id);
+        $transcription = $this->transcriber->fetch($id);
 
         $this->assertEquals($transcription->id, $id);
         $this->assertEquals($transcription->status, TranscriptionStatusEnum::COMPLETED);
@@ -153,7 +153,7 @@ class AwsTranscribeTranscriptionProviderTest extends TestCase
             'result' => json_decode($transcriptOutput, true),
         ]);
 
-        $this->provider->parse($transcription, $transcript);
+        $this->transcriber->parse($transcription, $transcript);
 
         $transcript->refresh();
 

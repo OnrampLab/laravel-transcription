@@ -1,13 +1,13 @@
 <?php
 
-namespace OnrampLab\Transcription\Tests\Classes\TranscriptionProviders;
+namespace OnrampLab\Transcription\Tests\Classes\AudioTranscribers;
 
+use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Contracts\Callbackable;
-use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
-class CallbackableProvider implements TranscriptionProvider, Callbackable
+class CallbackableTranscriber implements AudioTranscriber, Callbackable
 {
     /**
      * Transcribe audio file into text records in specific language.

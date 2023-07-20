@@ -14,7 +14,7 @@ use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Contracts\PiiEntityDetector;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
-use OnrampLab\Transcription\Contracts\TranscriptionProvider;
+use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Events\TranscriptFailedEvent;
@@ -185,7 +185,7 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Parse transcription object and update result to transcript model.
      */
-    protected function parse(Transcription $transcription, Transcript $transcript, TranscriptionProvider $provider): Transcript
+    protected function parse(Transcription $transcription, Transcript $transcript, AudioTranscriber $provider): Transcript
     {
         if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
             $provider->parse($transcription, $transcript);
@@ -218,7 +218,7 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Resolve a transcription provider.
      */
-    protected function resolveProvider(?string $providerName): TranscriptionProvider
+    protected function resolveProvider(?string $providerName): AudioTranscriber
     {
         $config = $this->getProcessorConfig('transcription', 'provider', $providerName);
         $driverName = $config['driver'];

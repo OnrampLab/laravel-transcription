@@ -15,9 +15,9 @@ use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Models\TranscriptSegment;
+use OnrampLab\Transcription\Tests\Classes\AudioTranscribers\CallbackableTranscriber;
+use OnrampLab\Transcription\Tests\Classes\AudioTranscribers\ConfirmableTranscriber;
 use OnrampLab\Transcription\Tests\Classes\PiiEntityDetectors\GeneralDetector;
-use OnrampLab\Transcription\Tests\Classes\TranscriptionProviders\CallbackableProvider;
-use OnrampLab\Transcription\Tests\Classes\TranscriptionProviders\ConfirmableProvider;
 use OnrampLab\Transcription\Tests\TestCase;
 use OnrampLab\Transcription\TranscriptionManager;
 use OnrampLab\Transcription\ValueObjects\PiiEntity;
@@ -25,9 +25,9 @@ use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class TranscriptionManagerTest extends TestCase
 {
-    private MockInterface $confirmableProviderMock;
+    private MockInterface $confirmableTranscriberMock;
 
-    private MockInterface $callbackableProviderMock;
+    private MockInterface $callbackableTranscriberMock;
 
     private MockInterface $generalDetectorMock;
 
@@ -53,13 +53,13 @@ class TranscriptionManagerTest extends TestCase
         Queue::fake();
         Event::fake();
 
-        $this->confirmableProviderMock = Mockery::mock(ConfirmableProvider::class);
-        $this->callbackableProviderMock = Mockery::mock(CallbackableProvider::class);
+        $this->confirmableTranscriberMock = Mockery::mock(ConfirmableTranscriber::class);
+        $this->callbackableTranscriberMock = Mockery::mock(CallbackableTranscriber::class);
         $this->generalDetectorMock = Mockery::mock(GeneralDetector::class);
 
         $this->manager = new TranscriptionManager($this->app);
-        $this->manager->addProvider('confirmable_driver', fn (array $config) => $this->confirmableProviderMock);
-        $this->manager->addProvider('callbackable_driver', fn (array $config) => $this->callbackableProviderMock);
+        $this->manager->addProvider('confirmable_driver', fn (array $config) => $this->confirmableTranscriberMock);
+        $this->manager->addProvider('callbackable_driver', fn (array $config) => $this->callbackableTranscriberMock);
         $this->manager->addDetector('general_driver', fn (array $config) => $this->generalDetectorMock);
     }
 
@@ -129,13 +129,13 @@ class TranscriptionManagerTest extends TestCase
             'status' => TranscriptionStatusEnum::COMPLETED,
         ]);
 
-        $this->confirmableProviderMock
+        $this->confirmableTranscriberMock
             ->shouldReceive('fetch')
             ->once()
             ->with($transcript->external_id)
             ->andReturn($transcription);
 
-        $this->confirmableProviderMock
+        $this->confirmableTranscriberMock
             ->shouldReceive('parse')
             ->once()
             ->withArgs(function (...$args) use ($transcription, $transcript) {
@@ -180,19 +180,19 @@ class TranscriptionManagerTest extends TestCase
             ],
         ];
 
-        $this->callbackableProviderMock
+        $this->callbackableTranscriberMock
             ->shouldReceive('validate')
             ->once()
             ->with($requestHeader, $requestBody)
             ->andReturn($transcription);
 
-        $this->callbackableProviderMock
+        $this->callbackableTranscriberMock
             ->shouldReceive('process')
             ->once()
             ->with($requestHeader, $requestBody)
             ->andReturn($transcription);
 
-        $this->callbackableProviderMock
+        $this->callbackableTranscriberMock
             ->shouldReceive('parse')
             ->once()
             ->withArgs(function (...$args) use ($transcription, $transcript) {

@@ -1,6 +1,6 @@
 <?php
 
-namespace OnrampLab\Transcription\TranscriptionProviders;
+namespace OnrampLab\Transcription\AudioTranscribers;
 
 use Aws\Credentials\Credentials;
 use Aws\TranscribeService\TranscribeServiceClient;
@@ -10,14 +10,14 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Contracts\Confirmable;
-use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Models\TranscriptSegment;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
-class AwsTranscribeTranscriptionProvider implements TranscriptionProvider, Confirmable
+class AwsTranscribeAudioTranscriber implements AudioTranscriber, Confirmable
 {
     protected TranscribeServiceClient $client;
 

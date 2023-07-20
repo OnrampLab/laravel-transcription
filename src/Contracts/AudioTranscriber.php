@@ -5,7 +5,7 @@ namespace OnrampLab\Transcription\Contracts;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
-interface TranscriptionProvider
+interface AudioTranscriber
 {
     /**
      * Transcribe audio file into text records in specific language.
