@@ -6,8 +6,9 @@ use Closure;
 use Illuminate\Support\Facades\Facade;
 
 /**
- * @method static \OnrampLab\Transcription\Models\Transcript make(string $audioUrl, string $languageCode, ?bool $shouldRedact = false, ?string $providerName = null)
- * @method static void addProvider(string $driverName, Closure $resolver)
+ * @method static \OnrampLab\Transcription\Models\Transcript make(string $audioUrl, string $languageCode, ?bool $shouldRedact = false, ?string $transcriberName = null)
+ * @method static void addTranscriber(string $driverName, Closure $resolver)
+ * @method static void addDetector(string $driverName, Closure $resolver)
  *
  * @see \OnrampLab\Transcription\TranscriptionManager
  */

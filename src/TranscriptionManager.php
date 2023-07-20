@@ -32,9 +32,9 @@ class TranscriptionManager implements TranscriptionManagerContract
     protected Application $app;
 
     /**
-     * The array of resolved transcription providers.
+     * The array of resolved audio transcribers.
      */
-    protected array $providers = [];
+    protected array $transcribers = [];
 
     /**
      * The array of resolved PII entity detectors.
@@ -47,11 +47,11 @@ class TranscriptionManager implements TranscriptionManagerContract
     }
 
     /**
-     * Add a transcription provider resolver.
+     * Add a audio transcriber resolver.
      */
-    public function addProvider(string $driverName, Closure $resolver): void
+    public function addTranscriber(string $driverName, Closure $resolver): void
     {
-        $this->providers[$driverName] = $resolver;
+        $this->transcribers[$driverName] = $resolver;
     }
 
     /**
@@ -65,16 +65,16 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Make transcription for audio file in specific language
      */
-    public function make(string $audioUrl, string $languageCode, ?bool $shouldRedact = false, ?string $providerName = null): Transcript
+    public function make(string $audioUrl, string $languageCode, ?bool $shouldRedact = false, ?string $transcriberName = null): Transcript
     {
-        $type = Str::kebab(Str::camel($providerName ?: $this->getDefaultProcessor('transcription')));
-        $provider = $this->resolveProvider($providerName);
+        $type = Str::kebab(Str::camel($transcriberName ?: $this->getDefaultProcessor('transcription')));
+        $transcriber = $this->resolveTranscriber($transcriberName);
 
-        if ($provider instanceof Callbackable) {
-            $provider->setUp('POST', URL::route('transcription.callback', ['type' => $type]));
+        if ($transcriber instanceof Callbackable) {
+            $transcriber->setUp('POST', URL::route('transcription.callback', ['type' => $type]));
         }
 
-        $transcription = $provider->transcribe($audioUrl, $languageCode);
+        $transcription = $transcriber->transcribe($audioUrl, $languageCode);
 
         $transcript = Transcript::create([
             'type' => $type,
@@ -85,7 +85,7 @@ class TranscriptionManager implements TranscriptionManagerContract
             'is_redacted' => $shouldRedact,
         ]);
 
-        if ($provider instanceof Confirmable) {
+        if ($transcriber instanceof Confirmable) {
             ConfirmTranscriptionJob::dispatch($transcript->type, $transcript->external_id)
                 ->delay(now()->addSeconds(config('transcription.confirmation.interval')));
         }
@@ -98,18 +98,18 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     public function confirm(string $type, string $externalId): Transcript
     {
-        $providerName = Str::snake(Str::camel($type));
-        $provider = $this->resolveProvider($providerName);
+        $transcriberName = Str::snake(Str::camel($type));
+        $transcriber = $this->resolveTranscriber($transcriberName);
 
-        if (!$provider instanceof Confirmable) {
-            throw new Exception("The [{$providerName}] transcription provider is not confirmable.");
+        if (!$transcriber instanceof Confirmable) {
+            throw new Exception("The [{$transcriberName}] audio transcriber is not confirmable.");
         }
 
         $transcript = Transcript::where('type', $type)
             ->where('external_id', $externalId)
             ->firstOrFail();
-        $transcription = $provider->fetch($externalId);
-        $transcript = $this->parse($transcription, $transcript, $provider);
+        $transcription = $transcriber->fetch($externalId);
+        $transcript = $this->parse($transcription, $transcript, $transcriber);
 
         $this->triggerEvent($transcript);
 
@@ -121,20 +121,20 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     public function callback(string $type, array $requestHeader, array $requestBody): Transcript
     {
-        $providerName = Str::snake(Str::camel($type));
-        $provider = $this->resolveProvider($providerName);
+        $transcriberName = Str::snake(Str::camel($type));
+        $transcriber = $this->resolveTranscriber($transcriberName);
 
-        if (!$provider instanceof Callbackable) {
-            throw new Exception("The [{$providerName}] transcription provider is not callbackable.");
+        if (!$transcriber instanceof Callbackable) {
+            throw new Exception("The [{$transcriberName}] audio transcriber is not callbackable.");
         }
 
-        $provider->validate($requestHeader, $requestBody);
+        $transcriber->validate($requestHeader, $requestBody);
 
-        $transcription = $provider->process($requestHeader, $requestBody);
+        $transcription = $transcriber->process($requestHeader, $requestBody);
         $transcript = Transcript::where('type', $type)
             ->where('external_id', $transcription->id)
             ->firstOrFail();
-        $transcript = $this->parse($transcription, $transcript, $provider);
+        $transcript = $this->parse($transcription, $transcript, $transcriber);
 
         $this->triggerEvent($transcript);
 
@@ -185,10 +185,10 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Parse transcription object and update result to transcript model.
      */
-    protected function parse(Transcription $transcription, Transcript $transcript, AudioTranscriber $provider): Transcript
+    protected function parse(Transcription $transcription, Transcript $transcript, AudioTranscriber $transcriber): Transcript
     {
         if ($transcription->status === TranscriptionStatusEnum::COMPLETED) {
-            $provider->parse($transcription, $transcript);
+            $transcriber->parse($transcription, $transcript);
         }
 
         $transcript->status = $transcription->status->value;
@@ -216,26 +216,26 @@ class TranscriptionManager implements TranscriptionManagerContract
     }
 
     /**
-     * Resolve a transcription provider.
+     * Resolve a audio transcriber.
      */
-    protected function resolveProvider(?string $providerName): AudioTranscriber
+    protected function resolveTranscriber(?string $transcriberName): AudioTranscriber
     {
-        $config = $this->getProcessorConfig('transcription', 'provider', $providerName);
+        $config = $this->getProcessorConfig('transcription', 'transcriber', $transcriberName);
         $driverName = $config['driver'];
 
-        if (! isset($this->providers[$driverName])) {
-            throw new InvalidArgumentException("No transcription provider with [{$driverName}] driver.");
+        if (! isset($this->transcribers[$driverName])) {
+            throw new InvalidArgumentException("No audio transcriber with [{$driverName}] driver.");
         }
 
-        return call_user_func($this->providers[$driverName], $config);
+        return call_user_func($this->transcribers[$driverName], $config);
     }
 
     /**
      * Resolve a PII entity detector.
      */
-    protected function resolveDetector(?string $providerName): PiiEntityDetector
+    protected function resolveDetector(?string $detectorName): PiiEntityDetector
     {
-        $config = $this->getProcessorConfig('redaction', 'detector', $providerName);
+        $config = $this->getProcessorConfig('redaction', 'detector', $detectorName);
         $driverName = $config['driver'];
 
         if (! isset($this->detectors[$driverName])) {

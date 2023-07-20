@@ -41,8 +41,8 @@ class TranscriptionManagerTest extends TestCase
     {
         parent::defineEnvironment($app);
 
-        $app['config']->set('transcription.transcription.providers.confirmable_provider', ['driver' => 'confirmable_driver']);
-        $app['config']->set('transcription.transcription.providers.callbackable_provider', ['driver' => 'callbackable_driver']);
+        $app['config']->set('transcription.transcription.transcribers.confirmable_transcriber', ['driver' => 'confirmable_driver']);
+        $app['config']->set('transcription.transcription.transcribers.callbackable_transcriber', ['driver' => 'callbackable_driver']);
         $app['config']->set('transcription.redaction.detectors.general_detector', ['driver' => 'general_driver']);
     }
 
@@ -58,19 +58,19 @@ class TranscriptionManagerTest extends TestCase
         $this->generalDetectorMock = Mockery::mock(GeneralDetector::class);
 
         $this->manager = new TranscriptionManager($this->app);
-        $this->manager->addProvider('confirmable_driver', fn (array $config) => $this->confirmableTranscriberMock);
-        $this->manager->addProvider('callbackable_driver', fn (array $config) => $this->callbackableTranscriberMock);
+        $this->manager->addTranscriber('confirmable_driver', fn (array $config) => $this->confirmableTranscriberMock);
+        $this->manager->addTranscriber('callbackable_driver', fn (array $config) => $this->callbackableTranscriberMock);
         $this->manager->addDetector('general_driver', fn (array $config) => $this->generalDetectorMock);
     }
 
     /**
      * @test
-     * @testWith ["confirmable_provider"]
-     *           ["callbackable_provider"]
+     * @testWith ["confirmable_transcriber"]
+     *           ["callbackable_transcriber"]
      */
-    public function make_should_work(string $providerName): void
+    public function make_should_work(string $transcriberName): void
     {
-        $this->app['config']->set('transcription.transcription.default', $providerName);
+        $this->app['config']->set('transcription.transcription.default', $transcriberName);
 
         $audioUrl = 'https://www.example.com/audio/test.wav';
         $languageCode = 'en-US';
@@ -79,22 +79,22 @@ class TranscriptionManagerTest extends TestCase
             'id' => Str::uuid(),
             'status' => TranscriptionStatusEnum::PROCESSING,
         ]);
-        /** @var MockInterface $providerMock */
-        $providerMock = $this->{Str::camel($providerName) . "Mock"};
+        /** @var MockInterface $transcriberMock */
+        $transcriberMock = $this->{Str::camel($transcriberName) . "Mock"};
 
-        if ($providerMock instanceof Callbackable) {
+        if ($transcriberMock instanceof Callbackable) {
             $callbackMethod = 'POST';
-            $callbackUrl = route('transcription.callback', ['type' => Str::kebab(Str::camel($providerName))]);
+            $callbackUrl = route('transcription.callback', ['type' => Str::kebab(Str::camel($transcriberName))]);
 
-            $providerMock
+            $transcriberMock
                 ->shouldReceive('setUp')
                 ->once()
                 ->with($callbackMethod, $callbackUrl);
         } else {
-            $providerMock->shouldNotReceive('setUp');
+            $transcriberMock->shouldNotReceive('setUp');
         }
 
-        $providerMock
+        $transcriberMock
             ->shouldReceive('transcribe')
             ->once()
             ->with($audioUrl, $languageCode)
@@ -102,12 +102,12 @@ class TranscriptionManagerTest extends TestCase
 
         $transcript = $this->manager->make($audioUrl, $languageCode, $shouldRedact);
 
-        $this->assertEquals($transcript->type, Str::kebab(Str::camel($providerName)));
+        $this->assertEquals($transcript->type, Str::kebab(Str::camel($transcriberName)));
         $this->assertEquals($transcript->external_id, $transcription->id);
         $this->assertEquals($transcript->status, $transcription->status->value);
         $this->assertEquals($transcript->is_redacted, $shouldRedact);
 
-        if ($providerMock instanceof Confirmable) {
+        if ($transcriberMock instanceof Confirmable) {
             Queue::assertPushed(ConfirmTranscriptionJob::class);
         } else {
             Queue::assertNotPushed(ConfirmTranscriptionJob::class);
@@ -120,7 +120,7 @@ class TranscriptionManagerTest extends TestCase
     public function confirm_should_work(): void
     {
         $transcript = Transcript::factory()->create([
-            'type' => Str::kebab(Str::camel('confirmable_provider')),
+            'type' => Str::kebab(Str::camel('confirmable_transcriber')),
             'external_id' => Str::uuid()->toString(),
             'status' => TranscriptionStatusEnum::PROCESSING,
         ]);
@@ -158,7 +158,7 @@ class TranscriptionManagerTest extends TestCase
     public function callback_should_work(): void
     {
         $transcript = Transcript::factory()->create([
-            'type' => Str::kebab(Str::camel('callbackable_provider')),
+            'type' => Str::kebab(Str::camel('callbackable_transcriber')),
             'external_id' => Str::uuid()->toString(),
             'status' => TranscriptionStatusEnum::PROCESSING,
         ]);
