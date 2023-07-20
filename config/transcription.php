@@ -6,24 +6,24 @@ return [
     | Transcription
     |--------------------------------------------------------------------------
     |
-    | | Default Provider Name
+    | | Default Transcriber Name
     |
-    | Here you may define a default provider.
+    | Here you may define a default transcriber.
     |
     |--------------------------------------------------------------------------
     |
-    | | Available Providers
+    | | Available Transcribers
     |
-    | Here you may configure the provider information for each service that
-    | is used by your application. You are free to add additional providers
+    | Here you may configure the transcriber information for each service that
+    | is used by your application. You are free to add additional transcribers
     | as required.
     |
     | Supported drivers: "aws_transcribe"
     |
     */
     'transcription' => [
-        'default' => env('TRANSCRIPTION_PROVIDER', 'aws_transcribe'),
-        'providers' => [
+        'default' => env('TRANSCRIPTION_TRANSCRIBER', 'aws_transcribe'),
+        'transcribers' => [
             'aws_transcribe' => [
                 'driver' => 'aws_transcribe',
                 'access_key' => env('AWS_ACCESS_KEY_ID'),
