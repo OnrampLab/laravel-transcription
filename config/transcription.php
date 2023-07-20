@@ -53,6 +53,14 @@ return [
     |
     | Supported drivers: "aws_comprehend"
     |
+    |--------------------------------------------------------------------------
+    |
+    | | Job Max Tries & Queue
+    |
+    | These options configure the behavior of redaction job so you can control
+    | how many times the job should be attempted and the queue that a job should
+    | be pushed onto.
+    |
     */
     'redaction' => [
         'default' => env('TRANSCRIPTION_DETECTOR', 'aws_comprehend'),
@@ -64,6 +72,8 @@ return [
                 'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
             ],
         ],
+        'tries' => 3,
+        'queue' => 'default',
     ],
 
     /*
