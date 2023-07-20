@@ -23,12 +23,12 @@ class TranscriptSegmentFactory extends Factory
     public function definition()
     {
         return [
-            'transcript_id'=> Transcript::factory(),
-            'start_time'=> $this->faker->time('H:i:s.v'),
-            'end_time'=> $this->faker->time('H:i:s.v'),
-            'content'=> $this->faker->sentence(),
+            'transcript_id' => Transcript::factory(),
+            'start_time' => $this->faker->time('H:i:s.v'),
+            'end_time' => $this->faker->time('H:i:s.v'),
+            'content' => $this->faker->sentence(),
             'content_redacted' => null,
-            'words'=> [],
+            'words' => [],
         ];
     }
 }

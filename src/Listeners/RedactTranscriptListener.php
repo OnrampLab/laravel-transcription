@@ -26,7 +26,7 @@ class RedactTranscriptListener
     {
         $transcript = $event->transcript;
 
-        if (!$transcript->is_redacted) {
+        if (! $transcript->is_redacted) {
             return;
         }
 

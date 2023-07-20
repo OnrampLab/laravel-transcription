@@ -45,7 +45,7 @@ class ConfirmTranscriptionJob implements ShouldQueue
     {
         $transcript = Transcription::confirm($this->type, $this->externalId);
 
-        if (!$transcript->isFinished()) {
+        if (! $transcript->isFinished()) {
             /** @var int $interval */
             $interval = config('transcription.confirmation.interval');
 

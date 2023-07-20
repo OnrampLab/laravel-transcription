@@ -10,11 +10,11 @@ use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Contracts\PiiEntityDetector;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
-use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Events\TranscriptFailedEvent;
@@ -101,7 +101,7 @@ class TranscriptionManager implements TranscriptionManagerContract
         $transcriberName = Str::snake(Str::camel($type));
         $transcriber = $this->resolveTranscriber($transcriberName);
 
-        if (!$transcriber instanceof Confirmable) {
+        if (! $transcriber instanceof Confirmable) {
             throw new Exception("The [{$transcriberName}] audio transcriber is not confirmable.");
         }
 
@@ -124,7 +124,7 @@ class TranscriptionManager implements TranscriptionManagerContract
         $transcriberName = Str::snake(Str::camel($type));
         $transcriber = $this->resolveTranscriber($transcriberName);
 
-        if (!$transcriber instanceof Callbackable) {
+        if (! $transcriber instanceof Callbackable) {
             throw new Exception("The [{$transcriberName}] audio transcriber is not callbackable.");
         }
 
@@ -146,7 +146,7 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     public function redact(Transcript $transcript, ?string $detectorName = null): void
     {
-        if (!$transcript->is_redacted) {
+        if (! $transcript->is_redacted) {
             return;
         }
 
@@ -208,7 +208,7 @@ class TranscriptionManager implements TranscriptionManagerContract
             default => null,
         };
 
-        if (!$eventClass) {
+        if (! $eventClass) {
             return;
         }
 

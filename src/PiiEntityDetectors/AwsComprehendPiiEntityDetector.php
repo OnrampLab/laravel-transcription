@@ -11,14 +11,14 @@ use OnrampLab\Transcription\ValueObjects\PiiEntity;
 
 class AwsComprehendPiiEntityDetector implements PiiEntityDetector
 {
-    protected ComprehendClient $client;
-
     private const ENTITY_TYPE_MAPPING = [
         'PHONE' => PiiEntityTypeEnum::PHONE_NUMBER,
         'EMAIL' => PiiEntityTypeEnum::EMAIL,
         'NAME' => PiiEntityTypeEnum::NAME,
         'ADDRESS' => PiiEntityTypeEnum::ADDRESS,
     ];
+
+    protected ComprehendClient $client;
 
     public function __construct(array $config)
     {
