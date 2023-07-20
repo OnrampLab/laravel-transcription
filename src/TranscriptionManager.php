@@ -6,6 +6,7 @@ use Closure;
 use Exception;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -15,6 +16,8 @@ use OnrampLab\Transcription\Contracts\PiiEntityDetector;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
+use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
+use OnrampLab\Transcription\Events\TranscriptFailedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Models\TranscriptSegment;
@@ -106,8 +109,11 @@ class TranscriptionManager implements TranscriptionManagerContract
             ->where('external_id', $externalId)
             ->firstOrFail();
         $transcription = $provider->fetch($externalId);
+        $transcript = $this->parse($transcription, $transcript, $provider);
 
-        return $this->parse($transcription, $transcript, $provider);
+        $this->triggerEvent($transcript);
+
+        return $transcript;
     }
 
     /**
@@ -128,8 +134,11 @@ class TranscriptionManager implements TranscriptionManagerContract
         $transcript = Transcript::where('type', $type)
             ->where('external_id', $transcription->id)
             ->firstOrFail();
+        $transcript = $this->parse($transcription, $transcript, $provider);
 
-        return $this->parse($transcription, $transcript, $provider);
+        $this->triggerEvent($transcript);
+
+        return $transcript;
     }
 
     /**
@@ -186,6 +195,24 @@ class TranscriptionManager implements TranscriptionManagerContract
         $transcript->save();
 
         return $transcript;
+    }
+
+    /**
+     * Trigger transcript related event.
+     */
+    protected function triggerEvent(Transcript $transcript): void
+    {
+        $eventClass = match ($transcript->status) {
+            TranscriptionStatusEnum::COMPLETED->value => TranscriptCompletedEvent::class,
+            TranscriptionStatusEnum::FAILED->value => TranscriptFailedEvent::class,
+            default => null,
+        };
+
+        if (!$eventClass) {
+            return;
+        }
+
+        event(App::make($eventClass, ['transcript' => $transcript]));
     }
 
     /**

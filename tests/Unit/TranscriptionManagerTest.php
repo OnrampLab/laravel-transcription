@@ -2,6 +2,7 @@
 
 namespace OnrampLab\Transcription\Tests\Unit;
 
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Mockery;
@@ -10,6 +11,7 @@ use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Enums\PiiEntityTypeEnum;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
+use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Models\TranscriptSegment;
@@ -49,6 +51,7 @@ class TranscriptionManagerTest extends TestCase
         parent::setUp();
 
         Queue::fake();
+        Event::fake();
 
         $this->confirmableProviderMock = Mockery::mock(ConfirmableProvider::class);
         $this->callbackableProviderMock = Mockery::mock(CallbackableProvider::class);
@@ -145,6 +148,8 @@ class TranscriptionManagerTest extends TestCase
         $transcript->refresh();
 
         $this->assertEquals($transcript->status, $transcription->status->value);
+
+        Event::assertDispatched(TranscriptCompletedEvent::class, fn (TranscriptCompletedEvent $event) => $event->transcript->id === $transcript->id);
     }
 
     /**
@@ -200,6 +205,8 @@ class TranscriptionManagerTest extends TestCase
         $transcript->refresh();
 
         $this->assertEquals($transcript->status, $transcription->status->value);
+
+        Event::assertDispatched(TranscriptCompletedEvent::class, fn (TranscriptCompletedEvent $event) => $event->transcript->id === $transcript->id);
     }
 
     /**
