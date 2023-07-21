@@ -27,6 +27,7 @@ class TranscriptFactory extends Factory
             'status' => 'processing',
             'audio_file_url' => $this->faker->url(),
             'language_code' => $this->faker->languageCode(),
+            'is_redacted' => $this->faker->boolean(),
         ];
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace OnrampLab\Transcription\TranscriptionProviders;
+namespace OnrampLab\Transcription\AudioTranscribers;
 
 use Aws\Credentials\Credentials;
 use Aws\TranscribeService\TranscribeServiceClient;
@@ -10,25 +10,25 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Contracts\Confirmable;
-use OnrampLab\Transcription\Contracts\TranscriptionProvider;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Models\TranscriptSegment;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
-class AwsTranscribeTranscriptionProvider implements TranscriptionProvider, Confirmable
+class AwsTranscribeAudioTranscriber implements AudioTranscriber, Confirmable
 {
-    protected TranscribeServiceClient $client;
-
-    protected array $tags;
-
     private const JOB_STATUS_MAPPING = [
         'QUEUED' => TranscriptionStatusEnum::PROCESSING,
         'IN_PROGRESS' => TranscriptionStatusEnum::PROCESSING,
         'FAILED' => TranscriptionStatusEnum::FAILED,
         'COMPLETED' => TranscriptionStatusEnum::COMPLETED,
     ];
+
+    protected TranscribeServiceClient $client;
+
+    protected array $tags;
 
     public function __construct(array $config)
     {
@@ -83,7 +83,7 @@ class AwsTranscribeTranscriptionProvider implements TranscriptionProvider, Confi
             $transcriptUrl = $job['Transcript']['TranscriptFileUri'];
 
             if (Str::startsWith($transcriptUrl, 's3://')) {
-                $transcriptUrl = $this->convertUrl($transcriptUrl, 's3', 'https');;
+                $transcriptUrl = $this->convertUrl($transcriptUrl, 's3', 'https');
             }
 
             /** @var GuzzleClient $client */
@@ -97,6 +97,24 @@ class AwsTranscribeTranscriptionProvider implements TranscriptionProvider, Confi
             'status' => $status,
             'result' => $result,
         ]);
+    }
+
+    /**
+     * Parse transcripts result of transcription and persist them into database.
+     */
+    public function parse(Transcription $transcription, Transcript $transcript): void
+    {
+        $words = Collection::make([]);
+
+        Collection::make(data_get($transcription->result, 'results.items'))
+            ->each(function (array $item) use (&$words, $transcript) {
+                $type = $item['type'];
+                $words = match ($item['type']) {
+                    'pronunciation' => $this->parsePronunciation($item, $words, $transcript),
+                    'punctuation' => $this->parsePunctuation($item, $words, $transcript),
+                    default => throw new Exception("Unknown item type: {$type}"),
+                };
+            });
     }
 
     private function validateUrl(string $url): void
@@ -117,7 +135,7 @@ class AwsTranscribeTranscriptionProvider implements TranscriptionProvider, Confi
         $pattern = $this->getUrlPattern($sourceSchema);
         $isMatched = preg_match($pattern, $url, $matches);
 
-        if (!$isMatched) {
+        if (! $isMatched) {
             throw new InvalidArgumentException('Provided URL is not a valid Amazon S3 bucket URL');
         }
 
@@ -156,25 +174,6 @@ class AwsTranscribeTranscriptionProvider implements TranscriptionProvider, Confi
             ])
             ->values()
             ->toArray();
-    }
-
-
-    /**
-     * Parse transcripts result of transcription and persist them into database.
-     */
-    public function parse(Transcription $transcription, Transcript $transcript): void
-    {
-        $words = Collection::make([]);
-
-        Collection::make(data_get($transcription->result, 'results.items'))
-            ->each(function (array $item) use (&$words, $transcript) {
-                $type = $item['type'];
-                $words = match ($item['type']) {
-                    'pronunciation' => $this->parsePronunciation($item, $words, $transcript),
-                    'punctuation' => $this->parsePunctuation($item, $words, $transcript),
-                    default => throw new Exception("Unknown item type: {$type}"),
-                };
-            });
     }
 
     private function parsePronunciation(array $item, Collection $words, Transcript $transcript): Collection

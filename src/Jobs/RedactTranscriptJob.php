@@ -8,8 +8,9 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use OnrampLab\Transcription\Facades\Transcription;
+use OnrampLab\Transcription\Models\Transcript;
 
-class ConfirmTranscriptionJob implements ShouldQueue
+class RedactTranscriptJob implements ShouldQueue
 {
     use Dispatchable;
     use InteractsWithQueue;
@@ -29,11 +30,10 @@ class ConfirmTranscriptionJob implements ShouldQueue
      * @return void
      */
     public function __construct(
-        private readonly string $type,
-        private readonly string $externalId,
+        private readonly Transcript $transcript,
     ) {
-        $this->tries = config('transcription.confirmation.tries');
-        $this->onQueue(config('transcription.confirmation.queue'));
+        $this->tries = config('transcription.redaction.tries');
+        $this->onQueue(config('transcription.redaction.queue'));
     }
 
     /**
@@ -43,13 +43,6 @@ class ConfirmTranscriptionJob implements ShouldQueue
      */
     public function handle()
     {
-        $transcript = Transcription::confirm($this->type, $this->externalId);
-
-        if (! $transcript->isFinished()) {
-            /** @var int $interval */
-            $interval = config('transcription.confirmation.interval');
-
-            $this->release($this->attempts() * $interval);
-        }
+        Transcription::redact($this->transcript);
     }
 }

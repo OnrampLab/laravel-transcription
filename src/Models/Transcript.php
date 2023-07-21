@@ -24,6 +24,16 @@ class Transcript extends Model
         'status',
         'audio_file_url',
         'language_code',
+        'is_redacted',
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @var array<string>
+     */
+    protected $casts = [
+        'is_redacted' => 'boolean',
     ];
 
     public function segments(): HasMany

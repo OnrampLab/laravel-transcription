@@ -3,8 +3,7 @@
 namespace OnrampLab\Transcription\Tests\Unit\Jobs;
 
 use Illuminate\Support\Str;
-use Mockery\MockInterface;
-use OnrampLab\Transcription\Contracts\TranscriptionManager;
+use OnrampLab\Transcription\Facades\Transcription;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Tests\TestCase;
@@ -18,8 +17,6 @@ class ConfirmTranscriptionJobTest extends TestCase
     private string $type;
 
     private string $externalId;
-
-    private MockInterface $transcriptionManagerMock;
 
     private ConfirmTranscriptionJob $job;
 
@@ -35,8 +32,6 @@ class ConfirmTranscriptionJobTest extends TestCase
         $this->app['config']->set('transcription.confirmation.tries', $this->tries);
         $this->app['config']->set('transcription.confirmation.queue', $this->queue);
 
-        $this->transcriptionManagerMock = $this->mock(TranscriptionManager::class);
-
         $this->job = new ConfirmTranscriptionJob($this->type, $this->externalId);
     }
 
@@ -47,8 +42,7 @@ class ConfirmTranscriptionJobTest extends TestCase
     {
         $transcript = Transcript::factory()->make();
 
-        $this->transcriptionManagerMock
-            ->shouldReceive('confirm')
+        Transcription::shouldReceive('confirm')
             ->once()
             ->with($this->type, $this->externalId)
             ->andReturn($transcript);

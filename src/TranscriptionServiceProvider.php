@@ -4,9 +4,10 @@ namespace OnrampLab\Transcription;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
+use OnrampLab\Transcription\AudioTranscribers\AwsTranscribeAudioTranscriber;
+use OnrampLab\Transcription\PiiEntityDetectors\AwsComprehendPiiEntityDetector;
+use OnrampLab\Transcription\Providers\EventServiceProvider;
 use OnrampLab\Transcription\TranscriptionManager;
-use OnrampLab\Transcription\TranscriptionProviders\AwsTranscribeTranscriptionProvider;
 
 class TranscriptionServiceProvider extends ServiceProvider
 {
@@ -18,6 +19,7 @@ class TranscriptionServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__ . '/../config/transcription.php', 'transcription');
 
         $this->registerTranscriptionManager();
+        $this->registerProviders();
     }
 
     /**
@@ -40,19 +42,35 @@ class TranscriptionServiceProvider extends ServiceProvider
     {
         $this->app->singleton('transcription', function ($app) {
             return tap(new TranscriptionManager($app), function ($manager) {
-                $this->registerTranscriptionProviders($manager);
+                $this->registerAudioTranscribers($manager);
+                $this->registerPiiEntityDetectors($manager);
             });
         });
     }
 
-    protected function registerTranscriptionProviders(TranscriptionManager $manager): void
+    protected function registerAudioTranscribers(TranscriptionManager $manager): void
     {
-        $this->registerAwsTranscribeTranscriptionProvider($manager);
+        $this->registerAwsTranscribeAudioTranscriber($manager);
     }
 
-    protected function registerAwsTranscribeTranscriptionProvider(TranscriptionManager $manager): void
+    protected function registerAwsTranscribeAudioTranscriber(TranscriptionManager $manager): void
     {
-        $manager->addProvider('aws_transcribe', fn (array $config) => new AwsTranscribeTranscriptionProvider($config));
+        $manager->addTranscriber('aws_transcribe', fn (array $config) => new AwsTranscribeAudioTranscriber($config));
+    }
+
+    protected function registerPiiEntityDetectors(TranscriptionManager $manager): void
+    {
+        $this->registerAwsComprehendPiiEntityDetector($manager);
+    }
+
+    protected function registerAwsComprehendPiiEntityDetector(TranscriptionManager $manager): void
+    {
+        $manager->addDetector('aws_comprehend', fn (array $config) => new AwsComprehendPiiEntityDetector($config));
+    }
+
+    protected function registerProviders(): void
+    {
+        $this->app->register(EventServiceProvider::class);
     }
 
     protected function registerTranscriptionCallbackRoute(): void
