@@ -157,8 +157,7 @@ class TranscriptionManager implements TranscriptionManagerContract
             ->each(function (TranscriptChunk $chunk) use ($detector, $languageCode) {
                 $entities = collect($detector->detect($chunk->content, $languageCode));
                 $entities->each(function (PiiEntity $entity) use (&$chunk) {
-                    $section = $chunk->sections->first(fn (TranscriptChunkSection $section) => $entity->offset >= $section->startOffset && $entity->offset < $section->endOffset);
-                    $segment = $section->segment;
+                    $segment = $chunk->findLocatedSegment($entity->offset);
                     $segment->content_redacted = str_replace($entity->value, Str::mask($entity->value, '*', 0), $segment->content_redacted ?? $segment->content);
                 });
                 $chunk->sections->each(function (TranscriptChunkSection $section) {
