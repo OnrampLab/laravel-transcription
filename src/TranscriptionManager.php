@@ -20,8 +20,9 @@ use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Events\TranscriptFailedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
-use OnrampLab\Transcription\Models\TranscriptSegment;
 use OnrampLab\Transcription\ValueObjects\PiiEntity;
+use OnrampLab\Transcription\ValueObjects\TranscriptChunk;
+use OnrampLab\Transcription\ValueObjects\TranscriptChunkSection;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class TranscriptionManager implements TranscriptionManagerContract
@@ -152,31 +153,17 @@ class TranscriptionManager implements TranscriptionManagerContract
 
         $detector = $this->resolveDetector($detectorName);
         $languageCode = $transcript->language_code;
-        $transcript->segments
-            ->chunk(5)
-            ->each(function (Collection $segments) use ($detector, $languageCode) {
-                $contents = collect([]);
-                $segments->reduce(
-                    function (?TranscriptSegment $previousSegment, TranscriptSegment $currentSegment) use (&$contents) {
-                        $offset = $previousSegment ? $previousSegment->end_offset + 1 : 0;
-                        $currentSegment->start_offset = $offset;
-                        $currentSegment->end_offset = $offset + strlen($currentSegment->content);
-
-                        $contents->push($currentSegment->content);
-                        $currentSegment->content_redacted = $currentSegment->content;
-
-                        return $currentSegment;
-                    },
-                    null,
-                );
-                $entities = collect($detector->detect($contents->join("\n"), $languageCode));
-                $entities->each(function (PiiEntity $entity) use (&$segments) {
-                    $segment = $segments->first(fn (TranscriptSegment $segment) => $entity->offset >= $segment->start_offset && $entity->offset < $segment->end_offset);
-                    $segment->content_redacted = str_replace($entity->value, Str::mask($entity->value, '*', 0), $segment->content_redacted);
+        $transcript->getSegmentsChunk(5)
+            ->each(function (TranscriptChunk $chunk) use ($detector, $languageCode) {
+                $entities = collect($detector->detect($chunk->content, $languageCode));
+                $entities->each(function (PiiEntity $entity) use (&$chunk) {
+                    $section = $chunk->sections->first(fn (TranscriptChunkSection $section) => $entity->offset >= $section->startOffset && $entity->offset < $section->endOffset);
+                    $segment = $section->segment;
+                    $segment->content_redacted = str_replace($entity->value, Str::mask($entity->value, '*', 0), $segment->content_redacted ?? $segment->content);
                 });
-                $segments->each(function (TranscriptSegment $segment) {
-                    $segment->offsetUnset('start_offset');
-                    $segment->offsetUnset('end_offset');
+                $chunk->sections->each(function (TranscriptChunkSection $section) {
+                    $segment = $section->segment;
+                    $segment->content_redacted = $segment->content_redacted ?? $segment->content;
                     $segment->save();
                 });
             });
