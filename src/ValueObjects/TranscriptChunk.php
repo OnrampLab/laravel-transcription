@@ -27,15 +27,32 @@ class TranscriptChunk implements JsonSerializable
         $this->sections = $data['sections'];
     }
 
-    public function findLocatedSegment(int $offset): TranscriptSegment
+    /**
+     * Search the sections for the given offset and returns its index
+     */
+    public function search(int $offset): int
     {
-        $section = $this->sections->first(fn (TranscriptChunkSection $section) => $offset >= $section->startOffset && $offset < $section->endOffset);
+        $index = $this->sections->search(fn (TranscriptChunkSection $section) => $offset >= $section->startOffset && $offset < $section->endOffset);
 
-        if (!$section) {
-            throw new Exception('Provided offset is not existed in any sections.');
+        if ($index === false) {
+            throw new Exception('Provided offset is not existed.');
         }
 
-        return $section->segment;
+        return $index;
+    }
+
+    /**
+     * Get the section at a given index
+     */
+    public function get(int $index): TranscriptChunkSection
+    {
+        $section = $this->sections->get($index);
+
+        if (!$section) {
+            throw new Exception('Provided index is not existed.');
+        }
+
+        return $section;
     }
 
     public function toArray(): array

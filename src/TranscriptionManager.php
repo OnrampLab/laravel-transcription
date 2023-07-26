@@ -20,6 +20,7 @@ use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Events\TranscriptFailedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
+use OnrampLab\Transcription\ValueObjects\EntityText;
 use OnrampLab\Transcription\ValueObjects\PiiEntity;
 use OnrampLab\Transcription\ValueObjects\TranscriptChunk;
 use OnrampLab\Transcription\ValueObjects\TranscriptChunkSection;
@@ -153,11 +154,22 @@ class TranscriptionManager implements TranscriptionManagerContract
 
         $detector = $this->resolveDetector($detectorName);
         $languageCode = $transcript->language_code;
-        $transcript->getSegmentsChunk(5)
-            ->each(function (TranscriptChunk $chunk) use ($detector, $languageCode) {
+        $entityTexts = collect([]);
+        $chunkSize = 5;
+        $transcript->getSegmentsChunk($chunkSize)
+            ->each(function (TranscriptChunk $chunk, int $chunkIndex) use ($detector, $languageCode, $chunkSize, &$entityTexts) {
+                $segmentBase = $chunkIndex * $chunkSize;
                 $entities = collect($detector->detect($chunk->content, $languageCode));
-                $entities->each(function (PiiEntity $entity) use (&$chunk) {
-                    $segment = $chunk->findLocatedSegment($entity->offset);
+                $entities->each(function (PiiEntity $entity) use (&$chunk, $segmentBase, &$entityTexts) {
+                    $sectionIndex = $chunk->search($entity->offset);
+                    $section = $chunk->get($sectionIndex);
+                    $entityTexts->push(new EntityText([
+                        'entity' => $entity,
+                        'segment_index' => $segmentBase + $sectionIndex,
+                        'start_offset' => $entity->offset - $section->startOffset,
+                        'end_offset' => $entity->offset - $section->startOffset + strlen($entity->value),
+                    ]));
+                    $segment = $section->segment;
                     $segment->content_redacted = str_replace($entity->value, Str::mask($entity->value, '*', 0), $segment->content_redacted ?? $segment->content);
                 });
                 $chunk->sections->each(function (TranscriptChunkSection $section) {
