@@ -14,12 +14,14 @@ use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Contracts\PiiEntityDetector;
+use OnrampLab\Transcription\Contracts\TextRedactor as TextRedactorContract;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Events\TranscriptFailedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
+use OnrampLab\Transcription\Redactors\TextRedactor;
 use OnrampLab\Transcription\ValueObjects\EntityText;
 use OnrampLab\Transcription\ValueObjects\PiiEntity;
 use OnrampLab\Transcription\ValueObjects\TranscriptChunk;
@@ -169,15 +171,10 @@ class TranscriptionManager implements TranscriptionManagerContract
                         'start_offset' => $entity->offset - $section->startOffset,
                         'end_offset' => $entity->offset - $section->startOffset + strlen($entity->value),
                     ]));
-                    $segment = $section->segment;
-                    $segment->content_redacted = str_replace($entity->value, Str::mask($entity->value, '*', 0), $segment->content_redacted ?? $segment->content);
-                });
-                $chunk->sections->each(function (TranscriptChunkSection $section) {
-                    $segment = $section->segment;
-                    $segment->content_redacted = $segment->content_redacted ?? $segment->content;
-                    $segment->save();
                 });
             });
+        $textRedactor = $this->resolveTextRedactor();
+        $textRedactor->redact($transcript, $entityTexts);
     }
 
     /**
@@ -241,6 +238,14 @@ class TranscriptionManager implements TranscriptionManagerContract
         }
 
         return call_user_func($this->detectors[$driverName], $config);
+    }
+
+    /**
+     * Resolve a text redactor.
+     */
+    protected function resolveTextRedactor(): TextRedactorContract
+    {
+        return $this->app->make(TextRedactor::class);
     }
 
     /**
