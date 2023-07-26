@@ -22,6 +22,7 @@ use OnrampLab\Transcription\Events\TranscriptFailedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Redactors\TextRedactor;
+use OnrampLab\Transcription\ValueObjects\EntityAudio;
 use OnrampLab\Transcription\ValueObjects\EntityText;
 use OnrampLab\Transcription\ValueObjects\PiiEntity;
 use OnrampLab\Transcription\ValueObjects\TranscriptChunk;
@@ -157,12 +158,13 @@ class TranscriptionManager implements TranscriptionManagerContract
         $detector = $this->resolveDetector($detectorName);
         $languageCode = $transcript->language_code;
         $entityTexts = collect([]);
+        $entityAudios = collect([]);
         $chunkSize = 5;
         $transcript->getSegmentsChunk($chunkSize)
-            ->each(function (TranscriptChunk $chunk, int $chunkIndex) use ($detector, $languageCode, $chunkSize, &$entityTexts) {
+            ->each(function (TranscriptChunk $chunk, int $chunkIndex) use ($detector, $languageCode, $chunkSize, &$entityTexts, &$entityAudios) {
                 $segmentBase = $chunkIndex * $chunkSize;
                 $entities = collect($detector->detect($chunk->content, $languageCode));
-                $entities->each(function (PiiEntity $entity) use (&$chunk, $segmentBase, &$entityTexts) {
+                $entities->each(function (PiiEntity $entity) use (&$chunk, $segmentBase, &$entityTexts, &$entityAudios) {
                     $sectionIndex = $chunk->search($entity->offset);
                     $section = $chunk->get($sectionIndex);
                     $entityTexts->push(new EntityText([
@@ -170,6 +172,13 @@ class TranscriptionManager implements TranscriptionManagerContract
                         'segment_index' => $segmentBase + $sectionIndex,
                         'start_offset' => $entity->offset - $section->startOffset,
                         'end_offset' => $entity->offset - $section->startOffset + strlen($entity->value),
+                    ]));
+                    $segment = $section->segment;
+                    $words = $segment->getMatchedWords($entity->value);
+                    $entityAudios->push(new EntityAudio([
+                        'entity' => $entity,
+                        'start_time' => $words->first()['start_time'],
+                        'end_time' => $words->last()['end_time'],
                     ]));
                 });
             });
