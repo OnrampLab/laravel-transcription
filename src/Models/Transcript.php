@@ -26,6 +26,7 @@ class Transcript extends Model
         'external_id',
         'status',
         'audio_file_url',
+        'audio_file_url_redacted',
         'language_code',
         'is_redacted',
     ];
