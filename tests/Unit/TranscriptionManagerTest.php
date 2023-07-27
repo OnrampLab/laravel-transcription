@@ -2,8 +2,11 @@
 
 namespace OnrampLab\Transcription\Tests\Unit;
 
+use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Mockery;
 use Mockery\MockInterface;
@@ -15,6 +18,8 @@ use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
 use OnrampLab\Transcription\Models\TranscriptSegment;
+use OnrampLab\Transcription\Redactors\AudioRedactor;
+use OnrampLab\Transcription\Redactors\TextRedactor;
 use OnrampLab\Transcription\Tests\Classes\AudioTranscribers\CallbackableTranscriber;
 use OnrampLab\Transcription\Tests\Classes\AudioTranscribers\ConfirmableTranscriber;
 use OnrampLab\Transcription\Tests\Classes\PiiEntityDetectors\GeneralDetector;
@@ -30,6 +35,10 @@ class TranscriptionManagerTest extends TestCase
     private MockInterface $callbackableTranscriberMock;
 
     private MockInterface $generalDetectorMock;
+
+    private MockInterface $textRedactorMock;
+
+    private MockInterface $audioRedactorMock;
 
     private TranscriptionManager $manager;
 
@@ -56,6 +65,8 @@ class TranscriptionManagerTest extends TestCase
         $this->confirmableTranscriberMock = Mockery::mock(ConfirmableTranscriber::class);
         $this->callbackableTranscriberMock = Mockery::mock(CallbackableTranscriber::class);
         $this->generalDetectorMock = Mockery::mock(GeneralDetector::class);
+        $this->textRedactorMock = $this->mock(TextRedactor::class);
+        $this->audioRedactorMock = $this->mock(AudioRedactor::class);
 
         $this->manager = new TranscriptionManager($this->app);
         $this->manager->addTranscriber('confirmable_driver', fn (array $config) => $this->confirmableTranscriberMock);
@@ -220,43 +231,125 @@ class TranscriptionManagerTest extends TestCase
 
         TranscriptSegment::factory()->create([
             'transcript_id' => $transcript->id,
-            'content' => 'Hi, this is Eric from Fake Service.',
+            'content' => 'Hi, this is John.',
+            'words' => [
+                [
+                    'start_time' => '00:00:00',
+                    'end_time' => '00:00:01',
+                    'content' => 'Hi,',
+                ],
+                [
+                    'start_time' => '00:00:01',
+                    'end_time' => '00:00:01',
+                    'content' => 'this',
+                ],
+                [
+                    'start_time' => '00:00:01',
+                    'end_time' => '00:00:01',
+                    'content' => 'is',
+                ],
+                [
+                    'start_time' => '00:00:02',
+                    'end_time' => '00:00:03',
+                    'content' => 'John',
+                ],
+            ],
         ]);
         TranscriptSegment::factory()->create([
             'transcript_id' => $transcript->id,
-            'content' => 'How are you doing?',
-        ]);
-        TranscriptSegment::factory()->create([
-            'transcript_id' => $transcript->id,
-            'content' => 'Yeah, but you guys call the wrong number. This number is 123-456-7890',
+            'content' => 'Please call me back to number 123-456-7890.',
+            'words' => [
+                [
+                    'start_time' => '00:00:03',
+                    'end_time' => '00:00:04',
+                    'content' => 'Please',
+                ],
+                [
+                    'start_time' => '00:00:04',
+                    'end_time' => '00:00:04',
+                    'content' => 'call',
+                ],
+                [
+                    'start_time' => '00:00:04',
+                    'end_time' => '00:00:04',
+                    'content' => 'me',
+                ],
+                [
+                    'start_time' => '00:00:04',
+                    'end_time' => '00:00:05',
+                    'content' => 'back',
+                ],
+                [
+                    'start_time' => '00:00:05',
+                    'end_time' => '00:00:05',
+                    'content' => 'to',
+                ],
+                [
+                    'start_time' => '00:00:05',
+                    'end_time' => '00:00:06',
+                    'content' => 'number',
+                ],
+                [
+                    'start_time' => '00:00:06',
+                    'end_time' => '00:00:09',
+                    'content' => '123-456-7890.',
+                ],
+            ]
         ]);
 
         $contents = $transcript->segments->pluck('content')->join("\n");
         $languageCode = $transcript->language_code;
+        $piiEntities = [
+            new PiiEntity([
+                'type' => PiiEntityTypeEnum::NAME,
+                'value' => 'John',
+                'offset' => 12,
+            ]),
+            new PiiEntity([
+                'type' => PiiEntityTypeEnum::PHONE_NUMBER,
+                'value' => '123-456-7890',
+                'offset' => 48,
+            ]),
+        ];
 
         $this->generalDetectorMock
             ->shouldReceive('detect')
             ->once()
             ->with($contents, $languageCode)
-            ->andReturn([
-                new PiiEntity([
-                    'type' => PiiEntityTypeEnum::NAME,
-                    'value' => 'Eric',
-                    'offset' => 12,
-                ]),
-                new PiiEntity([
-                    'type' => PiiEntityTypeEnum::PHONE_NUMBER,
-                    'value' => '123-456-7890',
-                    'offset' => 112,
-                ]),
-            ]);
+            ->andReturn($piiEntities);
+
+        $this->textRedactorMock
+            ->shouldReceive('redact')
+            ->once()
+            ->withArgs(function (Transcript $redactingTranscript, Collection $entityTexts) use ($transcript) {
+                return $redactingTranscript->id === $transcript->id
+                    && $entityTexts[0]->entity->value === 'John'
+                    && $entityTexts[0]->segmentIndex === 0
+                    && $entityTexts[0]->startOffset === 12
+                    && $entityTexts[0]->endOffset === 16
+                    && $entityTexts[1]->entity->value === '123-456-7890'
+                    && $entityTexts[1]->segmentIndex === 1
+                    && $entityTexts[1]->startOffset === 30
+                    && $entityTexts[1]->endOffset === 42;
+            });
+
+        $this->audioRedactorMock
+            ->shouldReceive('redact')
+            ->once()
+            ->withArgs(function (Transcript $redactingTranscript, Collection $entityAudios) use ($transcript) {
+                return $redactingTranscript->id === $transcript->id
+                    && $entityAudios[0]->entity->value === 'John'
+                    && $entityAudios[0]->startTime === '00:00:02'
+                    && $entityAudios[0]->endTime === '00:00:03'
+                    && $entityAudios[1]->entity->value === '123-456-7890'
+                    && $entityAudios[1]->startTime === '00:00:06'
+                    && $entityAudios[1]->endTime === '00:00:09';
+            });
+
+        Storage::shouldReceive('disk')
+            ->once()
+            ->andReturn(Mockery::mock(Filesystem::class));
 
         $this->manager->redact($transcript);
-
-        $transcript->unsetRelations();
-
-        $this->assertEquals($transcript->segments[0]->content_redacted, 'Hi, this is **** from Fake Service.');
-        $this->assertEquals($transcript->segments[1]->content_redacted, 'How are you doing?');
-        $this->assertEquals($transcript->segments[2]->content_redacted, 'Yeah, but you guys call the wrong number. This number is ************');
     }
 }

@@ -4,12 +4,15 @@ namespace OnrampLab\Transcription;
 
 use Closure;
 use Exception;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\AudioRedactor as AudioRedactorContract;
 use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
@@ -21,6 +24,7 @@ use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Events\TranscriptFailedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
+use OnrampLab\Transcription\Redactors\AudioRedactor;
 use OnrampLab\Transcription\Redactors\TextRedactor;
 use OnrampLab\Transcription\ValueObjects\EntityAudio;
 use OnrampLab\Transcription\ValueObjects\EntityText;
@@ -184,6 +188,9 @@ class TranscriptionManager implements TranscriptionManagerContract
             });
         $textRedactor = $this->resolveTextRedactor();
         $textRedactor->redact($transcript, $entityTexts);
+        $audioDisk = $this->resolveAudioDisk();
+        $audioRedactor = $this->resolveAudioRedactor();
+        $audioRedactor->redact($transcript, $entityAudios, $audioDisk);
     }
 
     /**
@@ -255,6 +262,22 @@ class TranscriptionManager implements TranscriptionManagerContract
     protected function resolveTextRedactor(): TextRedactorContract
     {
         return $this->app->make(TextRedactor::class);
+    }
+
+    /**
+     * Resolve a audio redactor.
+     */
+    protected function resolveAudioRedactor(): AudioRedactorContract
+    {
+        return $this->app->make(AudioRedactor::class);
+    }
+
+    /**
+     * Resolve a audio disk.
+     */
+    protected function resolveAudioDisk(): Filesystem
+    {
+        return Storage::disk('redaction');
     }
 
     /**
