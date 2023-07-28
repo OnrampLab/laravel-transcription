@@ -26,6 +26,7 @@ class TranscriptFactory extends Factory
             'external_id' => $this->faker->uuid(),
             'status' => 'processing',
             'audio_file_url' => $this->faker->url(),
+            'audio_file_url_redacted' => $this->faker->url(),
             'language_code' => $this->faker->languageCode(),
             'is_redacted' => $this->faker->boolean(),
         ];

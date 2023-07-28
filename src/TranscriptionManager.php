@@ -4,24 +4,30 @@ namespace OnrampLab\Transcription;
 
 use Closure;
 use Exception;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use OnrampLab\Transcription\Contracts\AudioRedactor;
 use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Contracts\PiiEntityDetector;
+use OnrampLab\Transcription\Contracts\TextRedactor;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Events\TranscriptFailedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
-use OnrampLab\Transcription\Models\TranscriptSegment;
+use OnrampLab\Transcription\ValueObjects\EntityAudio;
+use OnrampLab\Transcription\ValueObjects\EntityText;
 use OnrampLab\Transcription\ValueObjects\PiiEntity;
+use OnrampLab\Transcription\ValueObjects\TranscriptChunk;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class TranscriptionManager implements TranscriptionManagerContract
@@ -152,34 +158,36 @@ class TranscriptionManager implements TranscriptionManagerContract
 
         $detector = $this->resolveDetector($detectorName);
         $languageCode = $transcript->language_code;
-        $transcript->segments
-            ->chunk(5)
-            ->each(function (Collection $segments) use ($detector, $languageCode) {
-                $contents = collect([]);
-                $segments->reduce(
-                    function (?TranscriptSegment $previousSegment, TranscriptSegment $currentSegment) use (&$contents) {
-                        $offset = $previousSegment ? $previousSegment->end_offset + 1 : 0;
-                        $currentSegment->start_offset = $offset;
-                        $currentSegment->end_offset = $offset + strlen($currentSegment->content);
-
-                        $contents->push($currentSegment->content);
-                        $currentSegment->content_redacted = $currentSegment->content;
-
-                        return $currentSegment;
-                    },
-                    null,
-                );
-                $entities = collect($detector->detect($contents->join("\n"), $languageCode));
-                $entities->each(function (PiiEntity $entity) use (&$segments) {
-                    $segment = $segments->first(fn (TranscriptSegment $segment) => $entity->offset >= $segment->start_offset && $entity->offset < $segment->end_offset);
-                    $segment->content_redacted = str_replace($entity->value, Str::mask($entity->value, '*', 0), $segment->content_redacted);
-                });
-                $segments->each(function (TranscriptSegment $segment) {
-                    $segment->offsetUnset('start_offset');
-                    $segment->offsetUnset('end_offset');
-                    $segment->save();
+        $entityTexts = collect([]);
+        $entityAudios = collect([]);
+        $chunkSize = 5;
+        $transcript->getSegmentsChunk($chunkSize)
+            ->each(function (TranscriptChunk $chunk, int $chunkIndex) use ($detector, $languageCode, $chunkSize, &$entityTexts, &$entityAudios) {
+                $segmentBase = $chunkIndex * $chunkSize;
+                $entities = collect($detector->detect($chunk->content, $languageCode));
+                $entities->each(function (PiiEntity $entity) use (&$chunk, $segmentBase, &$entityTexts, &$entityAudios) {
+                    $sectionIndex = $chunk->search($entity->offset);
+                    $section = $chunk->get($sectionIndex);
+                    $entityTexts->push(new EntityText([
+                        'entity' => $entity,
+                        'segment_index' => $segmentBase + $sectionIndex,
+                        'start_offset' => $entity->offset - $section->startOffset,
+                        'end_offset' => $entity->offset - $section->startOffset + strlen($entity->value),
+                    ]));
+                    $segment = $section->segment;
+                    $words = $segment->getMatchedWords($entity->value);
+                    $entityAudios->push(new EntityAudio([
+                        'entity' => $entity,
+                        'start_time' => $words->first()['start_time'],
+                        'end_time' => $words->last()['end_time'],
+                    ]));
                 });
             });
+        $textRedactor = $this->resolveTextRedactor();
+        $textRedactor->redact($transcript, $entityTexts);
+        $audioDisk = $this->resolveAudioDisk();
+        $audioRedactor = $this->resolveAudioRedactor();
+        $audioRedactor->redact($transcript, $entityAudios, $audioDisk);
     }
 
     /**
@@ -243,6 +251,44 @@ class TranscriptionManager implements TranscriptionManagerContract
         }
 
         return call_user_func($this->detectors[$driverName], $config);
+    }
+
+    /**
+     * Resolve a text redactor.
+     */
+    protected function resolveTextRedactor(): TextRedactor
+    {
+        $className = $this->app['config']['transcription.redaction.redactor.text'];
+        $redactor = $this->app->make($className);
+
+        if (! $redactor instanceof TextRedactor) {
+            throw new InvalidArgumentException("The redactor class [{$className}] is not a valid text redactor class.");
+        }
+
+        return $redactor;
+    }
+
+    /**
+     * Resolve a audio redactor.
+     */
+    protected function resolveAudioRedactor(): AudioRedactor
+    {
+        $className = $this->app['config']['transcription.redaction.redactor.audio'];
+        $redactor = $this->app->make($className);
+
+        if (! $redactor instanceof AudioRedactor) {
+            throw new InvalidArgumentException("The redactor class [{$className}] is not a valid audio redactor class.");
+        }
+
+        return $redactor;
+    }
+
+    /**
+     * Resolve a audio disk.
+     */
+    protected function resolveAudioDisk(): Filesystem
+    {
+        return Storage::disk($this->app['config']['transcription.redaction.disk']);
     }
 
     /**

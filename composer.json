@@ -21,15 +21,18 @@
     "require": {
         "php": ">=8.1",
         "aws/aws-sdk-php": "^3.269",
-        "illuminate/database": "^8.0|^9.0"
+        "guzzlehttp/guzzle": "^6.5",
+        "illuminate/database": "^8.0|^9.0",
+        "php-ffmpeg/php-ffmpeg": "^1.1"
     },
     "require-dev": {
+        "doctrine/dbal": "^3.6",
         "mockery/mockery": "^1.5",
+        "nunomaduro/larastan": "^1.0",
         "nunomaduro/phpinsights": "^2.6",
         "onramplab/onr-phpcs-laravel": "^1.2",
-        "phpmd/phpmd": "^2.13",
         "orchestra/testbench": "^6.25",
-        "nunomaduro/larastan": "^1.0",
+        "phpmd/phpmd": "^2.13",
         "phpunit/phpunit": "^9.5",
         "rector/rector": "^0.15.3",
         "sempro/phpunit-pretty-print": "^1.4",
