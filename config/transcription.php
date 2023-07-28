@@ -1,5 +1,8 @@
 <?php
 
+use OnrampLab\Transcription\Contracts\AudioRedactor;
+use OnrampLab\Transcription\Redactors\TextRedactor;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -55,6 +58,20 @@ return [
     |
     |--------------------------------------------------------------------------
     |
+    | | Text/Audio Redactor Class
+    |
+    | This option configure the class file used to do text/audio redaction.
+    | You are free to use your custom implemented class.
+    |
+    |--------------------------------------------------------------------------
+    |
+    | | Audio Disk
+    |
+    | This option configure the remote disk used store redacted audio file.
+    | Should use any available disk in your `filesystems.php` file.
+    |
+    |--------------------------------------------------------------------------
+    |
     | | Job Max Tries & Queue
     |
     | These options configure the behavior of redaction job so you can control
@@ -72,6 +89,11 @@ return [
                 'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
             ],
         ],
+        'redactor' => [
+            'text' => TextRedactor::class,
+            'audio' => AudioRedactor::class,
+        ],
+        'disk' => 'local',
         'tries' => 3,
         'queue' => 'default',
     ],

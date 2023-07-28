@@ -12,25 +12,22 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
-use OnrampLab\Transcription\Contracts\AudioRedactor as AudioRedactorContract;
+use OnrampLab\Transcription\Contracts\AudioRedactor;
 use OnrampLab\Transcription\Contracts\AudioTranscriber;
 use OnrampLab\Transcription\Contracts\Callbackable;
 use OnrampLab\Transcription\Contracts\Confirmable;
 use OnrampLab\Transcription\Contracts\PiiEntityDetector;
-use OnrampLab\Transcription\Contracts\TextRedactor as TextRedactorContract;
+use OnrampLab\Transcription\Contracts\TextRedactor;
 use OnrampLab\Transcription\Contracts\TranscriptionManager as TranscriptionManagerContract;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
 use OnrampLab\Transcription\Events\TranscriptCompletedEvent;
 use OnrampLab\Transcription\Events\TranscriptFailedEvent;
 use OnrampLab\Transcription\Jobs\ConfirmTranscriptionJob;
 use OnrampLab\Transcription\Models\Transcript;
-use OnrampLab\Transcription\Redactors\AudioRedactor;
-use OnrampLab\Transcription\Redactors\TextRedactor;
 use OnrampLab\Transcription\ValueObjects\EntityAudio;
 use OnrampLab\Transcription\ValueObjects\EntityText;
 use OnrampLab\Transcription\ValueObjects\PiiEntity;
 use OnrampLab\Transcription\ValueObjects\TranscriptChunk;
-use OnrampLab\Transcription\ValueObjects\TranscriptChunkSection;
 use OnrampLab\Transcription\ValueObjects\Transcription;
 
 class TranscriptionManager implements TranscriptionManagerContract
@@ -259,17 +256,31 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Resolve a text redactor.
      */
-    protected function resolveTextRedactor(): TextRedactorContract
+    protected function resolveTextRedactor(): TextRedactor
     {
-        return $this->app->make(TextRedactor::class);
+        $className = $this->app['config']['transcription.redaction.redactor.text'];
+        $redactor = $this->app->make($className);
+
+        if (! $redactor instanceof TextRedactor) {
+            throw new InvalidArgumentException("The redactor class [{$className}] is not a valid text redactor class.");
+        }
+
+        return $redactor;
     }
 
     /**
      * Resolve a audio redactor.
      */
-    protected function resolveAudioRedactor(): AudioRedactorContract
+    protected function resolveAudioRedactor(): AudioRedactor
     {
-        return $this->app->make(AudioRedactor::class);
+        $className = $this->app['config']['transcription.redaction.redactor.audio'];
+        $redactor = $this->app->make($className);
+
+        if (! $redactor instanceof AudioRedactor) {
+            throw new InvalidArgumentException("The redactor class [{$className}] is not a valid audio redactor class.");
+        }
+
+        return $redactor;
     }
 
     /**
@@ -277,7 +288,7 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     protected function resolveAudioDisk(): Filesystem
     {
-        return Storage::disk('redaction');
+        return Storage::disk($this->app['config']['transcription.redaction.disk']);
     }
 
     /**

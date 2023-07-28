@@ -53,6 +53,9 @@ class TranscriptionManagerTest extends TestCase
         $app['config']->set('transcription.transcription.transcribers.confirmable_transcriber', ['driver' => 'confirmable_driver']);
         $app['config']->set('transcription.transcription.transcribers.callbackable_transcriber', ['driver' => 'callbackable_driver']);
         $app['config']->set('transcription.redaction.detectors.general_detector', ['driver' => 'general_driver']);
+        $app['config']->set('transcription.redaction.redactor.text', TextRedactor::class);
+        $app['config']->set('transcription.redaction.redactor.audio', AudioRedactor::class);
+        $app['config']->set('transcription.redaction.disk', 'redaction');
     }
 
     protected function setUp(): void
@@ -348,6 +351,7 @@ class TranscriptionManagerTest extends TestCase
 
         Storage::shouldReceive('disk')
             ->once()
+            ->with('redaction')
             ->andReturn(Mockery::mock(Filesystem::class));
 
         $this->manager->redact($transcript);
