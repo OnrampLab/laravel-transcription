@@ -55,7 +55,8 @@ class TranscriptionManagerTest extends TestCase
         $app['config']->set('transcription.redaction.detectors.general_detector', ['driver' => 'general_driver']);
         $app['config']->set('transcription.redaction.redactor.text', TextRedactor::class);
         $app['config']->set('transcription.redaction.redactor.audio', AudioRedactor::class);
-        $app['config']->set('transcription.redaction.disk', 'redaction');
+        $app['config']->set('transcription.redaction.audio.disk', 'redaction');
+        $app['config']->set('transcription.redaction.audio.folder', 'fake/audio/folder');
     }
 
     protected function setUp(): void

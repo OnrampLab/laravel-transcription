@@ -186,8 +186,9 @@ class TranscriptionManager implements TranscriptionManagerContract
         $textRedactor = $this->resolveTextRedactor();
         $textRedactor->redact($transcript, $entityTexts);
         $audioDisk = $this->resolveAudioDisk();
+        $audioFolder = $this->resolveAudioFolder();
         $audioRedactor = $this->resolveAudioRedactor();
-        $audioRedactor->redact($transcript, $entityAudios, $audioDisk);
+        $audioRedactor->redact($transcript, $entityAudios, $audioDisk, $audioFolder);
     }
 
     /**
@@ -288,7 +289,15 @@ class TranscriptionManager implements TranscriptionManagerContract
      */
     protected function resolveAudioDisk(): Filesystem
     {
-        return Storage::disk($this->app['config']['transcription.redaction.disk']);
+        return Storage::disk($this->app['config']['transcription.redaction.audio.disk']);
+    }
+
+    /**
+     * Resolve a audio folder.
+     */
+    protected function resolveAudioFolder(): string
+    {
+        return $this->app['config']['transcription.redaction.audio.folder'] ?? '';
     }
 
     /**
