@@ -14,5 +14,5 @@ interface AudioRedactor
      *
      * @param Collection<EntityAudio> $entityAudios
      */
-    public function redact(Transcript $transcript, Collection $entityAudios, Filesystem $audioDisk): void;
+    public function redact(Transcript $transcript, Collection $entityAudios, Filesystem $audioDisk, string $audioFolder): void;
 }

@@ -22,9 +22,10 @@ class AudioRedactor implements AudioRedactorContract
      *
      * @param Collection<EntityAudio> $entityAudios
      */
-    public function redact(Transcript $transcript, Collection $entityAudios, Filesystem $audioDisk): void
+    public function redact(Transcript $transcript, Collection $entityAudios, Filesystem $audioDisk, string $audioFolder): void
     {
         $fileName = Str::uuid()->toString();
+        $fileName = $audioFolder ? $audioFolder . '/' . $fileName : $fileName;
         $localDisk = Storage::disk('local');
 
         $this->downloadAudioFile($transcript->audio_file_url, $fileName, $localDisk);

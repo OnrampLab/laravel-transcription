@@ -103,6 +103,7 @@ class AudioRedactorTest extends TestCase
 
         $filePath = '/fake/file/path';
         $fileContent = 'fake file content';
+        $audioFolder = 'fake/audio/folder';
         $audioUrl = 'https://www.example.com/audio/redacted.wav';
 
         $this->audioFiltersMock
@@ -156,7 +157,7 @@ class AudioRedactorTest extends TestCase
             ->once()
             ->andReturn($audioUrl);
 
-        $this->redactor->redact($transcript, $entityAudios, $this->audioDiskMock);
+        $this->redactor->redact($transcript, $entityAudios, $this->audioDiskMock, $audioFolder);
 
         $transcript->refresh();
 
