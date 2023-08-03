@@ -1,6 +1,6 @@
 <?php
 
-use OnrampLab\Transcription\Contracts\AudioRedactor;
+use OnrampLab\Transcription\Redactors\AudioRedactor;
 use OnrampLab\Transcription\Redactors\TextRedactor;
 
 return [
