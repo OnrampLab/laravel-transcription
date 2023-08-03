@@ -1,6 +1,6 @@
 <?php
 
-use OnrampLab\Transcription\Contracts\AudioRedactor;
+use OnrampLab\Transcription\Redactors\AudioRedactor;
 use OnrampLab\Transcription\Redactors\TextRedactor;
 
 return [
@@ -65,10 +65,10 @@ return [
     |
     |--------------------------------------------------------------------------
     |
-    | | Audio Disk
+    | | Audio Disk & Folder
     |
-    | This option configure the remote disk used store redacted audio file.
-    | Should use any available disk in your `filesystems.php` file.
+    | This options configure the disk and folder used to store redacted audio
+    | file. Should use any available disk in your `filesystems.php` file.
     |
     |--------------------------------------------------------------------------
     |
@@ -93,7 +93,10 @@ return [
             'text' => TextRedactor::class,
             'audio' => AudioRedactor::class,
         ],
-        'disk' => 'local',
+        'audio' => [
+            'disk' => env('TRANSCRIPTION_AUDIO_DISK', 'local'),
+            'folder' => '',
+        ],
         'tries' => 3,
         'queue' => 'default',
     ],

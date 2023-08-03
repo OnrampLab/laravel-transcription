@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 use Illuminate\Support\Collection;
 use OnrampLab\Transcription\Database\Factories\TranscriptFactory;
 use OnrampLab\Transcription\Enums\TranscriptionStatusEnum;
@@ -51,10 +52,10 @@ class Transcript extends Model
             ->chunk($size)
             ->map(function (Collection $segments) use ($glue) {
                 $contents = collect([]);
-                $sections = $segments->reduce(
+                $sections = $segments->values()->reduce(
                     function (Collection $sections, TranscriptSegment $currentSegment, int $index) use (&$contents) {
                         $startOffset = $index > 0 ? $sections[$index - 1]->endOffset + 1 : 0;
-                        $endOffset = $startOffset + strlen($currentSegment->content);
+                        $endOffset = $startOffset + Str::length($currentSegment->content);
                         $sections->push(new TranscriptChunkSection([
                             'segment' => $currentSegment,
                             'start_offset' => $startOffset,

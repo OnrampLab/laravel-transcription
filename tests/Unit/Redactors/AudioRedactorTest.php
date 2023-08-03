@@ -28,6 +28,8 @@ class AudioRedactorTest extends TestCase
 
     private MockInterface $audioFiltersMock;
 
+    private MockInterface $ffmpegMock;
+
     private MockInterface $httpClientMock;
 
     private AudioRedactor $redactor;
@@ -38,24 +40,21 @@ class AudioRedactorTest extends TestCase
 
         $this->localDiskMock = Mockery::mock(Filesystem::class);
         $this->audioDiskMock = Mockery::mock(Filesystem::class);
-        $this->audioMock = Mockery::mock(Audio::class);
-        $this->audioFiltersMock = Mockery::mock(AudioFilters::class);
+
         $this->httpClientMock = $this->mock(Client::class);
 
         Storage::shouldReceive('disk')
-            ->once()
+            ->twice()
             ->with('local')
             ->andReturn($this->localDiskMock);
 
-        $ffmpegMock = Mockery::mock('overload:' . FFMpeg::class);
-        $ffmpegMock
+        $this->audioMock = Mockery::mock(Audio::class);
+        $this->audioFiltersMock = Mockery::mock(AudioFilters::class);
+        $this->ffmpegMock = Mockery::mock('overload:' . FFMpeg::class);
+        $this->ffmpegMock
             ->shouldReceive('create')
             ->once()
             ->andReturnSelf();
-        $ffmpegMock
-            ->shouldReceive('open')
-            ->once()
-            ->andReturn($this->audioMock);
 
         $this->redactor = $this->app->make(AudioRedactor::class);
     }
@@ -101,9 +100,22 @@ class AudioRedactorTest extends TestCase
             ]),
         ]);
 
-        $filePath = '/fake/file/path';
-        $fileContent = 'fake file content';
+        $tempFilePath = '/fake/temp/file/path';
+        $outputFilePath = '/fake/output/file/path';
+        $audioContent = 'fake audio file content';
+        $audioFolder = 'fake/audio/folder';
         $audioUrl = 'https://www.example.com/audio/redacted.wav';
+
+        $this->httpClientMock
+            ->shouldReceive('request')
+            ->once()
+            ->with('GET', $transcript->audio_file_url, ['sink' => $tempFilePath]);
+
+        $this->ffmpegMock
+            ->shouldReceive('open')
+            ->once()
+            ->with($tempFilePath)
+            ->andReturn($this->audioMock);
 
         $this->audioFiltersMock
             ->shouldReceive('custom')
@@ -125,38 +137,33 @@ class AudioRedactorTest extends TestCase
         $this->audioMock
             ->shouldReceive('save')
             ->once()
-            ->withArgs(fn ($format, $path) => $path === $filePath);
-
-        $this->httpClientMock
-            ->shouldReceive('request')
-            ->once()
-            ->with('GET', $transcript->audio_file_url, ['sink' => $filePath]);
+            ->withArgs(fn ($format, $path) => $path === $outputFilePath);
 
         $this->localDiskMock
             ->shouldReceive('path')
-            ->twice()
-            ->andReturn($filePath);
+            ->times(3)
+            ->andReturnValues([$tempFilePath, $tempFilePath, $outputFilePath]);
 
         $this->localDiskMock
             ->shouldReceive('get')
             ->once()
-            ->andReturn($fileContent);
+            ->andReturn($audioContent);
 
         $this->localDiskMock
             ->shouldReceive('delete')
-            ->once();
+            ->twice();
 
         $this->audioDiskMock
             ->shouldReceive('put')
             ->once()
-            ->withArgs(fn ($path, $contents) => $contents === $fileContent);
+            ->withArgs(fn ($path, $contents) => $contents === $audioContent);
 
         $this->audioDiskMock
             ->shouldReceive('url')
             ->once()
             ->andReturn($audioUrl);
 
-        $this->redactor->redact($transcript, $entityAudios, $this->audioDiskMock);
+        $this->redactor->redact($transcript, $entityAudios, $this->audioDiskMock, $audioFolder);
 
         $transcript->refresh();
 

@@ -22,27 +22,31 @@ class AudioRedactor implements AudioRedactorContract
      *
      * @param Collection<EntityAudio> $entityAudios
      */
-    public function redact(Transcript $transcript, Collection $entityAudios, Filesystem $audioDisk): void
+    public function redact(Transcript $transcript, Collection $entityAudios, Filesystem $audioDisk, string $audioFolder): void
     {
-        $fileName = Str::uuid()->toString();
-        $localDisk = Storage::disk('local');
+        $tempFileName = $this->downloadAudioFile($transcript->audio_file_url);
+        $audioFileName = $this->redactAudioFile($entityAudios, $tempFileName, $audioDisk, $audioFolder);
 
-        $this->downloadAudioFile($transcript->audio_file_url, $fileName, $localDisk);
-        $this->redactAudioFile($entityAudios, $fileName, $localDisk, $audioDisk);
-        $this->updateAudioUrl($transcript, $fileName, $audioDisk);
+        $this->updateAudioUrl($transcript, $audioFileName, $audioDisk);
     }
 
-    private function downloadAudioFile(string $audioUrl, string $fileName, Filesystem $localDisk): void
+    private function downloadAudioFile(string $fileUrl): string
     {
-        $filePath = $localDisk->path($fileName);
+        $tempFileName = Str::uuid()->toString();
+        $tempFilePath = Storage::disk('local')->path($tempFileName);
         /** @var Client $httpClient */
         $httpClient = App::make(Client::class);
-        $httpClient->request('GET', $audioUrl, ['sink' => $filePath]);
+        $httpClient->request('GET', $fileUrl, ['sink' => $tempFilePath]);
+
+        return $tempFileName;
     }
 
-    private function redactAudioFile(Collection $entityAudios, string $fileName, Filesystem $localDisk, Filesystem $audioDisk): void
+    private function redactAudioFile(Collection $entityAudios, string $tempFileName, Filesystem $audioDisk, string $audioFolder): string
     {
-        $filePath = $localDisk->path($fileName);
+        $localDisk = Storage::disk('local');
+        $outputFileName = sprintf('%s.wav', Str::uuid()->toString());
+        $audioFileName = sprintf('%s%s.wav', $audioFolder ? $audioFolder . '/' : '', Str::uuid()->toString());
+
         $parameters = $entityAudios->map(function (EntityAudio $entityAudio) {
             $from = Carbon::parse($entityAudio->startTime)->diffInMilliseconds(now()->startOfDay()) / 1000;
             $to = Carbon::parse($entityAudio->endTime)->diffInMilliseconds(now()->startOfDay()) / 1000;
@@ -50,17 +54,20 @@ class AudioRedactor implements AudioRedactorContract
             return "volume=enable='between(t,{$from},{$to})':volume=0";
         });
         $ffmpeg = FFMpeg::create();
-        $audio = $ffmpeg->open($filePath);
+        $audio = $ffmpeg->open($localDisk->path($tempFileName));
         $audio->filters()->custom($parameters->join(','));
-        $audio->save(new Wav(), $filePath);
+        $audio->save(new Wav(), $localDisk->path($outputFileName));
 
-        $audioDisk->put($fileName, $localDisk->get($fileName));
-        $localDisk->delete($fileName);
+        $audioDisk->put($audioFileName, $localDisk->get($outputFileName));
+        $localDisk->delete($tempFileName);
+        $localDisk->delete($outputFileName);
+
+        return $audioFileName;
     }
 
-    private function updateAudioUrl(Transcript $transcript, string $fileName, Filesystem $audioDisk): void
+    private function updateAudioUrl(Transcript $transcript, string $audioFileName, Filesystem $audioDisk): void
     {
-        $transcript->audio_file_url_redacted = $audioDisk->url($fileName);
+        $transcript->audio_file_url_redacted = $audioDisk->url($audioFileName);
         $transcript->save();
     }
 }
