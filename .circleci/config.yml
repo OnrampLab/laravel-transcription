@@ -17,7 +17,7 @@ commands:
             sudo chmod +x phive.phar
             sudo mv phive.phar /usr/local/bin/phive
 
-            phive install --force-accept-unsigned --trust-gpg-keys 67F861C3D889C656 phpDocumentor
+            phive install --force-accept-unsigned --trust-gpg-keys 8AC0BAA79732DD42 phpDocumentor
 
       - restore_cache:
           key: dependency-cache-composer-{{ checksum "composer.json" }}
