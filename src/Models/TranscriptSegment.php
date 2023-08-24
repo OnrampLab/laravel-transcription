@@ -27,6 +27,7 @@ class TranscriptSegment extends Model
         'content',
         'content_redacted',
         'words',
+        'speaker_label',
     ];
 
     /**

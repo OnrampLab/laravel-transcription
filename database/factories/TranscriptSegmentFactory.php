@@ -29,6 +29,7 @@ class TranscriptSegmentFactory extends Factory
             'content' => $this->faker->sentence(),
             'content_redacted' => null,
             'words' => [],
+            'speaker_label' => 'speaker_' . $this->faker->randomDigitNotZero(),
         ];
     }
 }
