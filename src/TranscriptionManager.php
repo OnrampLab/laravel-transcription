@@ -80,7 +80,8 @@ class TranscriptionManager implements TranscriptionManagerContract
             $transcriber->setUp('POST', URL::route('transcription.callback', ['type' => $type]));
         }
 
-        $transcription = $transcriber->transcribe($audioUrl, $languageCode);
+        $shouldIdentifySpeaker = $this->app['config']['transcription.transcription.speaker_identification'] ?? false;
+        $transcription = $transcriber->transcribe($audioUrl, $languageCode, $shouldIdentifySpeaker);
 
         $transcript = Transcript::create([
             'type' => $type,

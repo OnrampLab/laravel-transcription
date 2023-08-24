@@ -85,10 +85,9 @@ class TranscriptionManagerTest extends TestCase
      */
     public function make_should_work(string $transcriberName): void
     {
-        $this->app['config']->set('transcription.transcription.default', $transcriberName);
-
         $audioUrl = 'https://www.example.com/audio/test.wav';
         $languageCode = 'en-US';
+        $shouldIdentifySpeaker = true;
         $shouldRedact = true;
         $transcription = new Transcription([
             'id' => Str::uuid(),
@@ -96,6 +95,9 @@ class TranscriptionManagerTest extends TestCase
         ]);
         /** @var MockInterface $transcriberMock */
         $transcriberMock = $this->{Str::camel($transcriberName) . "Mock"};
+
+        $this->app['config']->set('transcription.transcription.default', $transcriberName);
+        $this->app['config']->set('transcription.transcription.speaker_identification', $shouldIdentifySpeaker);
 
         if ($transcriberMock instanceof Callbackable) {
             $callbackMethod = 'POST';
@@ -112,7 +114,7 @@ class TranscriptionManagerTest extends TestCase
         $transcriberMock
             ->shouldReceive('transcribe')
             ->once()
-            ->with($audioUrl, $languageCode)
+            ->with($audioUrl, $languageCode, $shouldIdentifySpeaker)
             ->andReturn($transcription);
 
         $transcript = $this->manager->make($audioUrl, $languageCode, $shouldRedact);
