@@ -12,7 +12,7 @@ class CallbackableTranscriber implements AudioTranscriber, Callbackable
     /**
      * Transcribe audio file into text records in specific language.
      */
-    public function transcribe(string $audioUrl, string $languageCode): Transcription
+    public function transcribe(string $audioUrl, string $languageCode, bool $shouldIdentifySpeaker): Transcription
     {
         return new Transcription([]);
     }

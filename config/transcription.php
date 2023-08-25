@@ -23,6 +23,13 @@ return [
     |
     | Supported drivers: "aws_transcribe"
     |
+    |--------------------------------------------------------------------------
+    |
+    | | Speaker Identification
+    |
+    | This option configure if the transcriber should identify speaker when
+    | executing transcription.
+    |
     */
     'transcription' => [
         'default' => env('TRANSCRIPTION_TRANSCRIBER', 'aws_transcribe'),
@@ -35,6 +42,7 @@ return [
                 'tags' => [],
             ],
         ],
+        'speaker_identification' => false,
     ],
 
     /*

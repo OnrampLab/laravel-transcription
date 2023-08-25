@@ -10,7 +10,7 @@ interface AudioTranscriber
     /**
      * Transcribe audio file into text records in specific language.
      */
-    public function transcribe(string $audioUrl, string $languageCode): Transcription;
+    public function transcribe(string $audioUrl, string $languageCode, bool $shouldIdentifySpeaker): Transcription;
 
     /**
      * Parse transcripts result of transcription and persist them into database.
