@@ -71,7 +71,7 @@ class TranscriptionManager implements TranscriptionManagerContract
     /**
      * Make transcription for audio file in specific language
      */
-    public function make(string $audioUrl, string $languageCode, ?bool $shouldRedact = false, ?string $transcriberName = null): Transcript
+    public function make(string $audioUrl, string $languageCode, ?int $maxSpeakerCount = null, ?bool $shouldRedact = false, ?string $transcriberName = null): Transcript
     {
         $type = Str::kebab(Str::camel($transcriberName ?: $this->getDefaultProcessor('transcription')));
         $transcriber = $this->resolveTranscriber($transcriberName);
@@ -80,8 +80,7 @@ class TranscriptionManager implements TranscriptionManagerContract
             $transcriber->setUp('POST', URL::route('transcription.callback', ['type' => $type]));
         }
 
-        $shouldIdentifySpeaker = $this->app['config']['transcription.transcription.speaker_identification'] ?? false;
-        $transcription = $transcriber->transcribe($audioUrl, $languageCode, $shouldIdentifySpeaker);
+        $transcription = $transcriber->transcribe($audioUrl, $languageCode, $maxSpeakerCount);
 
         $transcript = Transcript::create([
             'type' => $type,

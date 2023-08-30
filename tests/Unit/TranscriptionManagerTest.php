@@ -87,7 +87,7 @@ class TranscriptionManagerTest extends TestCase
     {
         $audioUrl = 'https://www.example.com/audio/test.wav';
         $languageCode = 'en-US';
-        $shouldIdentifySpeaker = true;
+        $maxSpeakerCount = 2;
         $shouldRedact = true;
         $transcription = new Transcription([
             'id' => Str::uuid(),
@@ -97,7 +97,6 @@ class TranscriptionManagerTest extends TestCase
         $transcriberMock = $this->{Str::camel($transcriberName) . "Mock"};
 
         $this->app['config']->set('transcription.transcription.default', $transcriberName);
-        $this->app['config']->set('transcription.transcription.speaker_identification', $shouldIdentifySpeaker);
 
         if ($transcriberMock instanceof Callbackable) {
             $callbackMethod = 'POST';
@@ -114,10 +113,10 @@ class TranscriptionManagerTest extends TestCase
         $transcriberMock
             ->shouldReceive('transcribe')
             ->once()
-            ->with($audioUrl, $languageCode, $shouldIdentifySpeaker)
+            ->with($audioUrl, $languageCode, $maxSpeakerCount)
             ->andReturn($transcription);
 
-        $transcript = $this->manager->make($audioUrl, $languageCode, $shouldRedact);
+        $transcript = $this->manager->make($audioUrl, $languageCode, $maxSpeakerCount, $shouldRedact);
 
         $this->assertEquals($transcript->type, Str::kebab(Str::camel($transcriberName)));
         $this->assertEquals($transcript->external_id, $transcription->id);
