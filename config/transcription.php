@@ -42,7 +42,6 @@ return [
                 'tags' => [],
             ],
         ],
-        'speaker_identification' => false,
     ],
 
     /*
