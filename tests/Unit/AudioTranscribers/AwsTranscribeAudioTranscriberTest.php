@@ -31,7 +31,7 @@ class AwsTranscribeAudioTranscriberTest extends TestCase
 
     private string $languageCode;
 
-    private bool $shouldIdentifySpeaker;
+    private int $maxSpeakerCount;
 
     private MockInterface $clientMock;
 
@@ -51,7 +51,7 @@ class AwsTranscribeAudioTranscriberTest extends TestCase
             ],
         ];
         $this->languageCode = 'en-US';
-        $this->shouldIdentifySpeaker = false;
+        $this->maxSpeakerCount = 2;
 
         $this->clientMock = Mockery::mock(TranscribeServiceClient::class);
         $this->transcriber = new AwsTranscribeAudioTranscriber($this->config, $this->clientMock);
@@ -85,7 +85,7 @@ class AwsTranscribeAudioTranscriberTest extends TestCase
             })
             ->andReturn($result);
 
-        $transcription = $this->transcriber->transcribe($audioUrl, $this->languageCode, $this->shouldIdentifySpeaker);
+        $transcription = $this->transcriber->transcribe($audioUrl, $this->languageCode, $this->maxSpeakerCount);
 
         $this->assertTrue(Str::isUuid($transcription->id));
         $this->assertEquals($transcription->status, TranscriptionStatusEnum::PROCESSING);
@@ -101,7 +101,7 @@ class AwsTranscribeAudioTranscriberTest extends TestCase
 
         $audioUrl = 'https://www.example.com';
 
-        $this->transcriber->transcribe($audioUrl, $this->languageCode, $this->shouldIdentifySpeaker);
+        $this->transcriber->transcribe($audioUrl, $this->languageCode, $this->maxSpeakerCount);
     }
 
     /**
