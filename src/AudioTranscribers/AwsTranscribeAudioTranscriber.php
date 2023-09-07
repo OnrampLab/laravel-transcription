@@ -43,7 +43,7 @@ class AwsTranscribeAudioTranscriber implements AudioTranscriber, Confirmable
     /**
      * Transcribe audio file into text records in specific language.
      */
-    public function transcribe(string $audioUrl, string $languageCode, bool $shouldIdentifySpeaker): Transcription
+    public function transcribe(string $audioUrl, string $languageCode, ?int $maxSpeakerCount = null): Transcription
     {
         // TODO: should support speaker identification
         $this->validateUrl($audioUrl);
